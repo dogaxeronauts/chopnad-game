@@ -684,7 +684,7 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
     Array.from(orderRef.current.items.values()).every((v) => v === 0) &&
     (() => {
       const remain = ceilSec(orderRef.current!.deadline - now());
-      const deliveryBonus = 200 + remain * 10; // Sadece bu değer zincire gönderilecek
+      const deliveryBonus = 250 + remain * 10; // Sadece bu değer zincire gönderilecek
       setScore((s) => s + deliveryBonus);
 
       // Transaction sadece sipariş tesliminde ve sadece teslim bonusu kadar gönderiliyor
