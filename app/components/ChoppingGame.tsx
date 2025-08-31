@@ -279,7 +279,7 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
     addEventListener("keyup", onUp);
     sceneRef.current?.addEventListener("mousedown", onMouse);
     try {
-      acRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      acRef.current = new (window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     } catch {
       acRef.current = null;
     }
@@ -937,7 +937,7 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
             boxShadow: "0 2px 8px #0002",
             imageRendering: "pixelated",
             fontSize: "13px",
-          } as any}
+          } as React.CSSProperties}
         />
 
         {/* game over */}
