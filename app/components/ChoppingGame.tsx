@@ -43,7 +43,7 @@ type Pack = { x: number; items: PackItem[]; el?: HTMLDivElement };
 const SCENE_W = 1152;
 const COUNTER_Y = 490;
 const PACK_Y = COUNTER_Y - 14;
-const SPEED = 3.2;
+const SPEED = 2.4;
 const CHOP_BASE = 60;
 
 const VEG_W = 72;
@@ -80,8 +80,8 @@ const diffCurve = (lv: number, anger: number = 0): Difficulty => {
   const t = clamp01(lv / 12);
   const angerFactor = 1 + (anger / 100) * 0.5;
   return {
-    belt: lerp(2.0, 4.2, t) * angerFactor,
-    spawnMs: Math.round(lerp(850, 520, t) / angerFactor),
+    belt: lerp(1.0, 2.2, t) * angerFactor, // Sebzeler daha yavaş akar
+    spawnMs: Math.round(lerp(1200, 900, t) / angerFactor), // Paketler daha seyrek gelir
     packCap: 2 + (lv > 6 ? 1 : 0),
     rottenRate: lerp(0.0, 0.3, t),
     powerRate: lerp(0.02, 0.08, t),
@@ -306,17 +306,45 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
 
   const bubbleText = () => {
     const remain = orderRef.current && ceilSec(orderRef.current.deadline - now());
+    const entries = orderRef.current
+      ? Array.from(orderRef.current.originalItems.entries())
+      : [];
+    const isTwoColumn = entries.length > 4;
+    const itemsHtml = entries
+      .map(([k, c], i) => {
+        const v = VegDefs.find((x) => x.key === k);
+        const done = (orderRef.current?.chopped.get(k) || 0) as number;
+        return v
+          ? `<div style="
+                display: flex;
+                align-items: center;
+                background: #f7f7fa;
+                border-radius: 8px;
+                padding: 5px 8px;
+                margin-bottom: 4px;
+                box-shadow: 0 1px 4px #0001;
+                font-size: 15px;
+            ">
+                <img class="mini" src="${v.src}" alt="" style="margin-right:7px;height:26px;width:26px;" />
+                <span style="font-size:15px;font-weight:700;min-width:32px;display:inline-block;text-align:center;">${done}/${c}</span>
+                <span style="margin-left:7px;font-size:15px;font-weight:500;">${v.label}</span>
+            </div>`
+          : "";
+      })
+      .filter(Boolean);
+
     const items =
-      orderRef.current &&
-      Array.from(orderRef.current.originalItems.entries())
-        .map(([k, c]) => {
-          const v = VegDefs.find((x) => x.key === k);
-          const done = (orderRef.current?.chopped.get(k) || 0) as number;
-          return v ? `<img class="mini" src="${v.src}" alt=""> ${done}/${c}` : "";
-        })
-        .filter(Boolean)
-        .join(" · ");
-    return `<span style="font-weight:600">Order</span> ${items || ""} <span style="opacity:.7">⏱ ${remain ?? "--"}s</span>`;
+      isTwoColumn
+        ? `<div style="display:grid;grid-template-columns:1fr 1fr;column-gap:18px;row-gap:2px;">${itemsHtml.join("")}</div>`
+        : itemsHtml.join("");
+
+    return `
+      <div style="font-weight:800;font-size:18px;margin-bottom:6px;letter-spacing:1px;">Order</div>
+      ${items || ""}
+      <div style="opacity:.8;margin-top:8px;font-size:14px;display:flex;align-items:center;">
+        <span style="font-size:16px;margin-right:6px;">⏱</span> ${remain ?? "--"}s
+      </div>
+    `;
   };
 
   const updateBubble = () => {
@@ -559,6 +587,22 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
     res.item &&
       res.pack &&
       ((res.item.hp--, beep(640, 0.05)),
+      // Animasyon ve highlight
+      (() => {
+        const packEl = res.pack.el;
+        if (packEl) {
+          const slotEl = packEl.children[res.item.idx] as HTMLElement | undefined;
+          if (slotEl) {
+            slotEl.style.transition = "box-shadow 0.2s, transform 0.2s";
+            slotEl.style.boxShadow = "0 0 0 4px #4caf50, 0 2px 0 #000 inset";
+            slotEl.style.transform = "scale(1.18)";
+            setTimeout(() => {
+              slotEl.style.boxShadow = "0 2px 0 #000 inset";
+              slotEl.style.transform = "scale(1)";
+            }, 220);
+          }
+        }
+      })(),
       sliceAndPile(res.item, res.pack),
       updateScore(res.item),
       removeWhenDead(res.item, res.pack),
@@ -851,15 +895,28 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
     <div
       style={{
         background: "#000",
-        display: "flex",
+        display: "block",
         justifyContent: "center",
         alignItems: "center",
         color: "#fff",
         fontFamily: "monospace",
-        minHeight: "100vh",
+        minHeight: "0vh",
+        position: "relative",
       }}
     >
-      <div className="scene" id="scene" ref={sceneRef} style={{ position: "relative", width: `${SCENE_W}px`, height: "768px", imageRendering: "pixelated", overflow: "hidden" }}>
+      <div
+        className="scene"
+        id="scene"
+        ref={sceneRef}
+        style={{
+          position: "relative",
+          width: `${SCENE_W}px`,
+          height: "768px",
+          imageRendering: "pixelated",
+          overflow: "hidden",
+          margin: "0 auto",
+        }}
+      >
         {/* arka plan */}
         <img className="bg" src="/06dd7a66-daee-4537-bd4d-81f864a503f5.png" alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 0 }} />
 
@@ -926,17 +983,25 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
             position: "absolute",
             zIndex: 9,
             background: "#fff",
-            color: "#000",
-            border: "2px solid #000",
-            padding: "6px 8px",
-            borderRadius: "12px",
-            whiteSpace: "nowrap",
-            minWidth: "120px",
-            minHeight: "36px",
+            color: "#222",
+            border: "2px solid #4caf50",
+            padding: "24px 32px",
+            borderRadius: "18px",
+            minWidth: "420px",
+            maxWidth: "420px",
+            minHeight: "120px",
+            maxHeight: "220px",
+            left: "calc(100% - 200px)",
+            bottom: "340px",
+            transform: "translateX(-50%)",
             display: "none",
-            boxShadow: "0 2px 8px #0002",
+            boxShadow: "0 8px 32px #0002",
             imageRendering: "pixelated",
-            fontSize: "13px",
+            fontSize: "16px",
+            fontWeight: 600,
+            lineHeight: "1.4",
+            letterSpacing: "0.5px",
+            overflow: "hidden", // Scroll yok, taşma yok
           } as React.CSSProperties}
         />
 
@@ -957,7 +1022,7 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
             fontSize: "28px",
           }}
         >
-          <div>GAME OVER</div>
+          <div>Turn Back to Kitchen</div>
           <button
             onClick={() => {
               packsRef.current.forEach((p) => p.el && p.el.parentElement && p.el.parentElement.removeChild(p.el));
@@ -978,10 +1043,109 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
               newOrder();
               requestAnimationFrame(loop);
             }}
-            style={{ fontFamily: "inherit", padding: "8px 14px" }}
+            style={{
+              fontFamily: "inherit",
+              padding: "10px 18px",
+              background: "#8e24aa",
+              color: "#fff",
+              border: "none",
+              borderRadius: "8px",
+              fontWeight: 700,
+              fontSize: "18px",
+              cursor: "pointer",
+              boxShadow: "0 2px 8px #0002",
+              transition: "background 0.2s",
+            }}
           >
-            Retry
+            Restart
           </button>
+        </div>
+      </div>
+
+      {/* Game Guide Panel - To the right of the game scene */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: `calc(50% + ${SCENE_W / 2}px + 24px)`, // 24px boşluk bırak
+          width: "420px",
+          minHeight: "400px",
+          maxHeight: "90vh",
+          background: "rgba(255,255,255,0.97)",
+          color: "#222",
+          fontFamily: "monospace",
+          fontSize: "15px",
+          borderLeft: "2px solid #4caf50",
+          padding: "18px 22px 18px 22px",
+          zIndex: 100,
+          boxShadow: "0 0 12px #0002",
+          overflowY: "auto",
+        }}
+      >
+        <div style={{ fontWeight: 700, fontSize: "18px", marginBottom: "8px" }}>
+          Game Guide & Scoring
+        </div>
+        <div style={{ marginBottom: "10px", lineHeight: "1.6" }}>
+          <ul style={{ paddingLeft: "18px", margin: 0 }}>
+            <li>
+              <b>Each vegetable</b> has a score value. Chop the required amount for each order.
+            </li>
+            <li>
+              <b>Order Score</b> = Sum of (Vegetable Score × Required Amount) for all items in the order.
+            </li>
+            <li>
+              <b>Combo Bonus:</b> Chopping consecutive correct vegetables increases your combo and bonus points.
+            </li>
+            <li>
+              <b>Wrong chop</b> or rotten vegetables decrease your score and reset your combo.
+            </li>
+            <li>
+              <b>Delivery Bonus:</b> Delivering an order before time runs out grants extra points.
+            </li>
+          </ul>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center" }}>
+          {VegDefs.map((veg) => {
+            const required = orderRef.current?.originalItems.get(veg.key) ?? 0;
+            return (
+              <div key={veg.key} style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                background: "#f7f7fa",
+                borderRadius: "8px",
+                padding: "4px 10px",
+                minWidth: "90px"
+              }}>
+                <img src={veg.src} alt={veg.label} style={{
+                  width: 22,
+                  height: 22,
+                  objectFit: "contain",
+                  imageRendering: "pixelated"
+                }} />
+                <span style={{ fontWeight: 700 }}>{veg.label}</span>
+                <span style={{ color: "#4caf50", fontWeight: 700 }}>+{veg.score}</span>
+                <span style={{ color: "#888" }}>x{required}</span>
+              </div>
+            );
+          })}
+          {/* Order total score */}
+          <div style={{
+            marginLeft: "auto",
+            fontWeight: 700,
+            fontSize: "16px",
+            color: "#8e24aa"
+          }}>
+            Order Total Score: {orderRef.current
+              ? Array.from(orderRef.current.originalItems.entries()).reduce(
+                  (sum, [k, c]) => {
+                    const veg = VegDefs.find((v) => v.key === k);
+                    return sum + (veg ? veg.score * c : 0);
+                  },
+                  0
+                )
+              : 0}
+          </div>
         </div>
       </div>
 
@@ -1000,32 +1164,26 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
           will-change: transform;
         }
         .veg {
-          width: 72px;
-          height: 72px;
+          width: 64px;
+          height: 64px;
           object-fit: contain;
           image-rendering: pixelated;
           filter: drop-shadow(0 2px 0 #000);
           user-select: none;
           pointer-events: none;
         }
-        .orderBubble:after {
-          content: "";
-          position: absolute;
-          left: 50%;
-          transform: translateX(-50%);
-          bottom: -10px;
-          width: 0;
-          height: 0;
-          border-left: 10px solid transparent;
-          border-right: 10px solid transparent;
-          border-top: 10px solid #fff;
-        }
         .orderBubble .mini {
-          height: 16px;
-          width: 16px;
+          height: 26px;
+          width: 26px;
           object-fit: contain;
           image-rendering: pixelated;
           vertical-align: middle;
+          margin-right: 7px;
+        }
+        body {
+          margin: 0;
+          padding: 0;
+          background: #000;
         }
       `}</style>
     </div>
