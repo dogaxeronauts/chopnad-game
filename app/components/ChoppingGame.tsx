@@ -1,9 +1,12 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { TransactionQueue } from '../lib/score-api';
+import { GAME_CONFIG } from '../lib/game-config';
+import toast from 'react-hot-toast';
 
 /**
- * SpaceShooterGame.tsx — Next.js + React (TypeScript)
+ * ChoppingGame.tsx — Next.js + React (TypeScript)
  * - principal-dev tarzı: asla if/else/for deyimi yok
  * - fonksiyonel/declarative akış: map/filter/reduce, boolean arithmetic, short-circuit
  * - dinamik zorluk, rotten & knife power-up, kompakt order bubble
@@ -11,6 +14,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
  */
 
 /* ---------------------------- Sabitler & Tipler ---------------------------- */
+
+interface ChoppingGameProps {
+  playerAddress?: string;
+}
 
 type VegDef = {
   key: string;
@@ -93,7 +100,7 @@ type Difficulty = {
   orderVar: number; // ekstra rastgele parça
 };
 
-const SpaceShooterGame: React.FC = () => {
+const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
   /* ------------------------------- Refs/State ------------------------------ */
   const sceneRef = useRef<HTMLDivElement | null>(null);
   const chefRef = useRef<HTMLImageElement | null>(null);
@@ -116,6 +123,11 @@ const SpaceShooterGame: React.FC = () => {
   orderRef.current = order;
 
   const [score, setScore] = useState(0);
+  const [lastSubmittedScore, setLastSubmittedScore] = useState(0);
+
+  // Transaction queue for handling retries
+  const transactionQueueRef = useRef<TransactionQueue | null>(null);
+
   const [combo, setCombo] = useState(0);
   const [timeLeft, setTimeLeft] = useState("--");
 
@@ -746,7 +758,7 @@ const SpaceShooterGame: React.FC = () => {
   // Şef "Furious" moodunda skor 50 azalır (her 700ms)
   if (currentMood.mood === "🤬 Furious") {
     const interval = setInterval(() => {
-      setScore(s => Math.max(0, s - 100));
+      setScore(s => Math.max(0, s - 500));
     }, 700);
     return () => clearInterval(interval);
   }
@@ -805,7 +817,16 @@ const SpaceShooterGame: React.FC = () => {
 
         {/* HUD */}
         <div className="hud" style={{ position: "absolute", top: "10px", left: "10px", zIndex: 9, fontWeight: "bold", fontSize: "18px" }}>
-          {"Score: "} <span id="score" ref={scoreRef}>0</span> {" | "}
+          {"Score: "} <span id="score" ref={scoreRef}>0</span>
+          {playerAddress && (
+            <>
+              {" | "}
+              <span style={{ color: "#4caf50", fontSize: "14px" }}>
+                {playerAddress}
+              </span>
+            </>
+          )}
+          {" | "}
           {"Combo: "} <span id="combo" ref={comboRef}>0</span> {" | "}
           {"Time: "} <span id="orderTimer" ref={timerRef}>--</span> {" | "}
           {"Anger: "}
@@ -942,4 +963,4 @@ function updateAngerEffects(anger: number) {
   // applyEffects(ANGER_EFFECTS[level]);
 }
 
-export default SpaceShooterGame;
+export default ChoppingGame;

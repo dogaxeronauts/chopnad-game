@@ -78,9 +78,9 @@ function PrivyAuth({ onAddressChange }: { onAddressChange: (address: string) => 
     return (
       <button 
         onClick={login}
-        className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+        className="bg-purple-700 text-white px-8 py-2 rounded text-xl hover:bg-purple-600"
       >
-        Login
+        Sign in with <br /><span className="font-bold text-purple-300">Monad Games ID</span>
       </button>
     );
   }
