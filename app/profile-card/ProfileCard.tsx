@@ -239,15 +239,18 @@ const ProfileCardComponent: React.FC<ProfileCardProps> = ({
 
     const handleClick = () => {
       if (!enableMobileTilt || location.protocol !== 'https:') return;
-      if (typeof (window.DeviceMotionEvent as any).requestPermission === 'function') {
-        (window.DeviceMotionEvent as any)
-          .requestPermission()
+      const DeviceMotionEventWithPerm = window.DeviceMotionEvent as typeof DeviceMotionEvent & {
+        requestPermission?: () => Promise<string>;
+      };
+      if (typeof DeviceMotionEventWithPerm.requestPermission === 'function') {
+        DeviceMotionEventWithPerm
+          .requestPermission!()
           .then((state: string) => {
             if (state === 'granted') {
               window.addEventListener('deviceorientation', deviceOrientationHandler);
             }
           })
-          .catch((err: any) => console.error(err));
+          .catch((err: unknown) => console.error(err));
       } else {
         window.addEventListener('deviceorientation', deviceOrientationHandler);
       }
