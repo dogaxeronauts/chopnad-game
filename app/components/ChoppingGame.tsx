@@ -667,14 +667,96 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
     updateBubble();
   };
 
+  useEffect(() => {
+    if (playerAddress && !transactionQueueRef.current) {
+      transactionQueueRef.current = new TransactionQueue();
+    }
+    return () => {
+      if (transactionQueueRef.current) {
+        transactionQueueRef.current.destroy();
+        transactionQueueRef.current = null;
+      }
+    };
+  }, [playerAddress]);
+
   const finalizeOrderWhenDone = () =>
     orderRef.current &&
     Array.from(orderRef.current.items.values()).every((v) => v === 0) &&
     (() => {
       const remain = ceilSec(orderRef.current!.deadline - now());
-      const deliveryBonus = 200 + remain * 10;
+      const deliveryBonus = 200 + remain * 10; // Sadece bu değer zincire gönderilecek
       setScore((s) => s + deliveryBonus);
 
+      // Transaction sadece sipariş tesliminde ve sadece teslim bonusu kadar gönderiliyor
+      if (playerAddress && transactionQueueRef.current) {
+        transactionQueueRef.current.enqueue(
+          playerAddress,
+          deliveryBonus, // Sadece teslim bonusu
+          1,
+          {
+            onSuccess: (result) => {
+              toast.success(
+                `Transaction confirmed! +${deliveryBonus} points`,
+                {
+                  duration: 3000,
+                  icon: '🚀',
+                }
+              );
+              if (result.transactionHash) {
+                toast.success(
+                  `TX: ${result.transactionHash.slice(0, 10)}...`,
+                  {
+                    duration: 5000,
+                    icon: '📝',
+                    style: {
+                      fontSize: '12px',
+                    },
+                  }
+                );
+              }
+            },
+            onFailure: (error) => {
+              const isPriorityError = error.includes('Another transaction has higher priority') || 
+                                      error.includes('higher priority');
+              toast.error(
+                isPriorityError 
+                  ? `Transaction congestion: ${deliveryBonus} points will retry with higher priority`
+                  : `Transaction failed permanently: ${error}`,
+                {
+                  duration: isPriorityError ? 4000 : 6000,
+                  icon: isPriorityError ? '⚡' : '💀',
+                }
+              );
+            },
+            onRetry: (attempt) => {
+              toast(
+                `Retrying transaction... (${attempt}/5)`,
+                {
+                  duration: 2000,
+                  icon: '🔄',
+                  style: {
+                    background: '#f59e0b',
+                    color: '#fff',
+                  },
+                }
+              );
+            },
+          }
+        );
+        toast(
+          `Queuing +${deliveryBonus} points (order delivered)`,
+          {
+            duration: 2500,
+            icon: '📦',
+            style: {
+              background: '#3b82f6',
+              color: '#fff',
+            },
+          }
+        );
+      }
+
+      // ...bubble ve yeni order kodları aynı kalır...
       const b = bubbleRef.current;
       b &&
         ((b.textContent = "✅ Teslim!"),
