@@ -57,10 +57,31 @@ const intersect = (ax: number, ay: number, aw: number, ah: number, bx: number, b
 
 /* ---------------------- Dinamik Zorluk & Mekanikler ----------------------- */
 
+// Yardımcı fonksiyonlar ve sabitler
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 const rand = () => Math.random();
 const chance = (p: number) => rand() < p;
+const asSpecial = (def: VegDef, kind: "rotten" | "knife"): VegDef =>
+  kind === "rotten"
+    ? { ...def, key: `rotten:${def.key}`, label: `Rotten ${def.label}`, score: -Math.max(10, def.score), hits: 1 }
+    : { ...def, key: `knife`, label: `Knife Power`, score: 0, hits: 1, src: "/knife.png" };
+const isRotten = (k: string) => k.startsWith("rotten:");
+const isKnife = (k: string) => k === "knife";
+const spanOf = (p: Pack) => PACK_PAD * 2 + p.items.length * VEG_W + (p.items.length - 1) * GAP;
+const diffCurve = (lv: number, anger: number = 0): Difficulty => {
+  const t = clamp01(lv / 12);
+  const angerFactor = 1 + (anger / 100) * 0.5;
+  return {
+    belt: lerp(2.0, 4.2, t) * angerFactor,
+    spawnMs: Math.round(lerp(850, 520, t) / angerFactor),
+    packCap: 2 + (lv > 6 ? 1 : 0),
+    rottenRate: lerp(0.0, 0.3, t),
+    powerRate: lerp(0.02, 0.08, t),
+    orderSize: Math.round(lerp(2, 3, t)),
+    orderVar: Math.round(lerp(2, 4, t)),
+  };
+};
 
 type Difficulty = {
   belt: number;
@@ -71,32 +92,6 @@ type Difficulty = {
   orderSize: number; // min parça
   orderVar: number; // ekstra rastgele parça
 };
-
-const diffCurve = (lv: number): Difficulty => {
-  const t = clamp01(lv / 12);
-  return {
-    belt: lerp(2.0, 4.2, t),
-    spawnMs: Math.round(lerp(850, 520, t)),
-    packCap: 2 + (lv > 6 ? 1 : 0),
-    rottenRate: lerp(0.0, 0.3, t),
-    powerRate: lerp(0.02, 0.08, t),
-    orderSize: Math.round(lerp(2, 3, t)),
-    orderVar: Math.round(lerp(2, 4, t)),
-  };
-};
-
-type SpecialKind = "rotten" | "knife";
-const asSpecial = (def: VegDef, kind: SpecialKind): VegDef =>
-  kind === "rotten"
-    ? { ...def, key: `rotten:${def.key}`, label: `Rotten ${def.label}`, score: -Math.max(10, def.score), hits: 1 }
-    : { ...def, key: `knife`, label: `Knife Power`, score: 0, hits: 1, src: "/knife.png" };
-
-const isRotten = (k: string) => k.startsWith("rotten:");
-const isKnife = (k: string) => k === "knife";
-
-const spanOf = (p: Pack) => PACK_PAD * 2 + p.items.length * VEG_W + (p.items.length - 1) * GAP;
-
-/* -------------------------------- Bileşen --------------------------------- */
 
 const SpaceShooterGame: React.FC = () => {
   /* ------------------------------- Refs/State ------------------------------ */
@@ -144,6 +139,15 @@ const SpaceShooterGame: React.FC = () => {
   const ordersDoneRef = useRef(0);
   const heatRef = useRef(0);
   const powerUntilRef = useRef(0);
+
+  const angerRef = useRef(0);
+  const [anger, setAnger] = useState(0);
+  const MOODS = [
+    { threshold: 0,   mood: "🙂 Calm",    color: "#4caf50" },
+    { threshold: 30,  mood: "😠 Annoyed", color: "#ff9800" },
+    { threshold: 60,  mood: "🤬 Furious", color: "#f44336" },
+  ];
+  const currentMood = MOODS.reduce((acc, m) => (anger >= m.threshold ? m : acc), MOODS[0]);
 
   /* -------------------------------- Assetler ------------------------------- */
   const VegDefs = useMemo<VegDef[]>(
@@ -557,7 +561,7 @@ const SpaceShooterGame: React.FC = () => {
     const pieces = 2 + (idxBase % 2);
     Array.from({ length: pieces }, (_, i) => idxBase + i).forEach((idx) => {
       const tx = pile.x + (idx % 2 === 0 ? -1 : 1) * (16 + (idx % 3) * 4);
-      const ty = pile.y - idx * 0.45 - ((idx % 5) * 1.2);
+      const ty = pile.y + 60 - idx * 0.45 - ((idx % 5) * 1.2); // ← 40 ekledik, sebzeler daha aşağıda!
       launchFlight(hitItem.def, sx, sy, tx, ty, idx);
       pile.count++;
     });
@@ -567,7 +571,20 @@ const SpaceShooterGame: React.FC = () => {
     const base = hitItem.def.score ?? 0;
     setScore((s) => s + base);
     const contributes = orderRef.current && orderRef.current.items.has(hitItem.key.replace(/^rotten:/, ""));
-    contributes || (setCombo(0), undefined);
+    // Yanlış sebze: burada anger artışı ve feedback
+    if (!contributes) {
+      setCombo(0);
+      setScore(s => s - 15);
+      angerRef.current = Math.min(100, angerRef.current + 12);
+      setAnger(angerRef.current);
+      beep(120, 0.1);
+      if (bubbleRef.current) {
+        bubbleRef.current.style.background = "#ffcccc";
+        setTimeout(() => {
+          bubbleRef.current && (bubbleRef.current.style.background = "#fff");
+        }, 200);
+      }
+    }
   };
 
   const removeWhenDead = (hitItem: PackItem, hitPack: Pack) =>
@@ -610,18 +627,23 @@ const SpaceShooterGame: React.FC = () => {
     const lv = levelRef.current;
     const diff = diffCurve(lv);
 
-    const n = 2 + Math.floor(rand() * 3);
-    const pool = [...VegDefs].sort(() => rand() - 0.5).slice(0, n);
-    const originalItems = new Map(pool.map((v) => [v.key, diff.orderSize + Math.floor(rand() * diff.orderVar)]));
+    // Havuzu büyüt, aynı sebze birden fazla gelebilir
+    const n = 3 + Math.floor(rand() * 4); // Daha fazla sebze
+    const pool = Array.from({ length: n }, () => VegDefs[Math.floor(rand() * VegDefs.length)]);
+    const originalItems = new Map();
+    pool.forEach(v => {
+      const prev = originalItems.get(v.key) || 0;
+      originalItems.set(v.key, prev + diff.orderSize + Math.floor(rand() * diff.orderVar));
+    });
     const items = new Map(Array.from(originalItems.entries()));
-    const dur = 20 + Math.floor(rand() * 7) - Math.min(lv, 8);
+    const dur = 18 + Math.floor(rand() * 8) - Math.min(lv, 8);
 
     const created: Order = {
       items,
       originalItems,
       deadline: now() + Math.max(12, dur) * 1000,
       totalDur: Math.max(12, dur),
-      chopped: new Map(pool.map((v) => [v.key, 0])),
+      chopped: new Map(Array.from(originalItems.keys()).map((k) => [k, 0])),
     };
 
     rrIndexRef.current = 0;
@@ -720,6 +742,16 @@ const SpaceShooterGame: React.FC = () => {
     timerRef.current && (timerRef.current.textContent = String(timeLeft));
   }, [timeLeft]);
 
+  useEffect(() => {
+  // Şef "Furious" moodunda skor 50 azalır (her 700ms)
+  if (currentMood.mood === "🤬 Furious") {
+    const interval = setInterval(() => {
+      setScore(s => Math.max(0, s - 100));
+    }, 700);
+    return () => clearInterval(interval);
+  }
+}, [currentMood.mood]);
+  
   /* --------------------------------- Render -------------------------------- */
   return (
     <div
@@ -775,7 +807,11 @@ const SpaceShooterGame: React.FC = () => {
         <div className="hud" style={{ position: "absolute", top: "10px", left: "10px", zIndex: 9, fontWeight: "bold", fontSize: "18px" }}>
           {"Score: "} <span id="score" ref={scoreRef}>0</span> {" | "}
           {"Combo: "} <span id="combo" ref={comboRef}>0</span> {" | "}
-          {"Time: "} <span id="orderTimer" ref={timerRef}>--</span>
+          {"Time: "} <span id="orderTimer" ref={timerRef}>--</span> {" | "}
+          {"Anger: "}
+          <span style={{ color: currentMood.color, fontWeight: "bold" }}>{anger}</span>
+          {" "}
+          <span style={{ color: currentMood.color, marginLeft: 8 }}>{currentMood.mood}</span>
         </div>
 
         {/* bubble */}
@@ -892,5 +928,18 @@ const SpaceShooterGame: React.FC = () => {
     </div>
   );
 };
+
+const ANGER_EFFECTS = [
+  { beltSpeed: 1, chopCD: 1, chefEmote: "calm" },
+  { beltSpeed: 1.2, chopCD: 1.3, chefEmote: "mad" },
+  { beltSpeed: 1.5, chopCD: 1.6, chefEmote: "rage" }
+];
+function updateAngerEffects(anger: number) {
+  const thresholds = [25, 50, 75];
+  const level = thresholds.findIndex(t => anger >= t);
+  // TODO: Implement applyEffects or handle effects here
+  // Example stub:
+  // applyEffects(ANGER_EFFECTS[level]);
+}
 
 export default SpaceShooterGame;
