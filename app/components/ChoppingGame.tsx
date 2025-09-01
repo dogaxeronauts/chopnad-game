@@ -143,6 +143,7 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress, username }) 
   const lastSpawnRef = useRef(0);
   const lastChopRef = useRef(0);
   const chefXRef = useRef(300);
+  const [chefX, setChefX] = useState(300);
 
   const pileCtxRef = useRef<CanvasRenderingContext2D | null>(null);
   const fxCtxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -554,8 +555,11 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress, username }) 
 
   useEffect(() => {
     ["/sef1.png", "/sef3.png"].forEach(src => {
-      const img = new window.Image();
-      img.src = src;
+      const link = document.createElement("link");
+      link.rel = "preload";
+      link.as = "image";
+      link.href = src;
+      document.head.appendChild(link);
     });
   }, []);
 
@@ -838,6 +842,7 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress, username }) 
     // hareket
     const dx = (Number(rightRef.current) - Number(leftRef.current)) * SPEED;
     chefXRef.current = clamp(chefXRef.current + dx, 60, 820);
+    setChefX(chefXRef.current); // Şefin pozisyonunu state ile güncelle
     chefRef.current && (chefRef.current.style.left = px(chefXRef.current));
 
     // süre & bitiş
@@ -932,21 +937,33 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress, username }) 
         <img className="bg" src="/06dd7a66-daee-4537-bd4d-81f864a503f5.png" alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 0 }} />
 
         {/* aşçı */}
-        <img
-          id="chef"
-          ref={chefRef}
-          src={chefPoses[chefPose]}
-          alt="chef"
-          style={{
-            position: "absolute",
-            left: "300px",
-            bottom: "170px",
-            width: "512px",
-            height: "512px",
-            zIndex: 5,
-            imageRendering: "pixelated"
-          }}
-        />
+
+        <div style={{ position: "absolute", left: `${chefX}px`, bottom: "170px", width: "512px", height: "512px", zIndex: 5 }}>
+          <img
+            src="/sef1.png"
+            alt="chef-idle"
+            style={{
+              position: "absolute",
+              width: "100%",
+              height: "100%",
+              imageRendering: "pixelated",
+              opacity: chefPose === "idle" ? 1 : 0,
+              transition: "opacity 0s"
+            }}
+          />
+          <img
+            src="/sef3.png"
+            alt="chef-chop"
+            style={{
+              position: "absolute",
+              width: "100%",
+              height: "100%",
+              imageRendering: "pixelated",
+              opacity: chefPose === "chop" ? 1 : 0,
+              transition: "opacity 0s"
+            }}
+          />
+        </div>
 
         {/* tepeleme & efekt */}
         <canvas
