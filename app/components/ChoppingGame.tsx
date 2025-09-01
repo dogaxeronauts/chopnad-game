@@ -551,6 +551,13 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
 
   const [chefPose, setChefPose] = useState<keyof typeof chefPoses>("idle");
 
+  useEffect(() => {
+    ["/sef1.png", "/sef3.png"].forEach(src => {
+      const img = new window.Image();
+      img.src = src;
+    });
+  }, []);
+
   const chop = () => {
     const cd = powerUntilRef.current > now() ? 36 : CHOP_BASE;
     const t = now();
