@@ -58,12 +58,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Maximum limits to prevent abuse - made more restrictive
-    const MAX_SCORE_PER_REQUEST = 1000; // Reduced from 10000
+    const MAX_SCORE_PER_REQUEST = 2000; // Reduced from 10000
     const MAX_TRANSACTIONS_PER_REQUEST = 10; // Reduced from 100
     
     // Additional validation: reasonable score ranges
     const MIN_SCORE_PER_REQUEST = 1;
-    const MAX_SCORE_PER_TRANSACTION = 1000; // Max 1000 points per transaction
+    const MAX_SCORE_PER_TRANSACTION = 2000; // Max 1000 points per transaction
 
     if (scoreAmount > MAX_SCORE_PER_REQUEST || transactionAmount > MAX_TRANSACTIONS_PER_REQUEST) {
       return createAuthenticatedResponse(

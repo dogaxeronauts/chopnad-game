@@ -544,6 +544,13 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
   const chopZone = () => ({ x: chefXRef.current + 180, y: COUNTER_Y, w: 220, h: 110 });
 
   /* --------------------------------- Chop ---------------------------------- */
+  const chefPoses = {
+    idle: "/sef1.png",
+    chop: "/sef3.png",
+  };
+
+  const [chefPose, setChefPose] = useState<keyof typeof chefPoses>("idle");
+
   const chop = () => {
     const cd = powerUntilRef.current > now() ? 36 : CHOP_BASE;
     const t = now();
@@ -551,16 +558,11 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
       ((lastChopRef.current = t),
       (choppingRef.current && true) ||
         ((choppingRef.current = true),
-        (chefRef.current &&
-          ((() => {
-            const prev = chefRef.current!.src;
-            chefRef.current!.src = "/sef3.png";
-            setTimeout(() => {
-              chefRef.current && (chefRef.current.src = prev);
-              choppingRef.current = false;
-            }, cd);
-          })(),
-          undefined)),
+        setChefPose("chop"), // sadece state değiştir
+        setTimeout(() => {
+          setChefPose("idle");
+          choppingRef.current = false;
+        }, cd),
         handleHit()));
   };
 
@@ -924,9 +926,17 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
         <img
           id="chef"
           ref={chefRef}
-          src="/sef1.png"
+          src={chefPoses[chefPose]}
           alt="chef"
-          style={{ position: "absolute", left: "300px", bottom: "170px", width: "512px", height: "512px", zIndex: 5, imageRendering: "pixelated" }}
+          style={{
+            position: "absolute",
+            left: "300px",
+            bottom: "170px",
+            width: "512px",
+            height: "512px",
+            zIndex: 5,
+            imageRendering: "pixelated"
+          }}
         />
 
         {/* tepeleme & efekt */}
