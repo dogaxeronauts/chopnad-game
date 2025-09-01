@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ChopUpNad
 
-## Getting Started
+ChopUpNad is a fast-paced kitchen game built with Next.js, featuring blockchain-based score tracking and wallet authentication via Privy.
 
-First, run the development server:
+## Features
+
+- Next.js + React + TypeScript
+- Dynamic difficulty system
+- Blockchain score and transaction tracking
+- Wallet authentication with Privy
+- Real-time toast notifications
+- Responsive, modern UI
+
+## Setup
+
+```bash
+git clone https://github.com/<your-repo>/mission7-example-game.git
+cd mission7-example-game
+npm install
+```
+
+## Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create a `.env` file and add:
 
-## Learn More
+```
+NEXT_PUBLIC_PRIVY_APP_ID=<Your Privy App ID>
+NEXT_PUBLIC_APP_URL=<Your App URL>
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Gameplay
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Log in with your Monad Games ID (wallet).
+2. Chop the correct vegetables to earn points.
+3. Deliver orders on time for bonus points.
+4. Track your stats and transactions on the blockchain.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
+You can deploy easily with Vercel. See [DEPLOYMENT.md](mission7-example-game/DEPLOYMENT.md) for details.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Contributing
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Pull requests and feedback are welcome!
+
+## License
+
+MIT
