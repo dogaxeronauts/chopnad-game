@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 
 interface ChoppingGameProps {
   playerAddress?: string;
+  username?: string;
 }
 
 type VegDef = {
@@ -80,8 +81,8 @@ const diffCurve = (lv: number, anger: number = 0): Difficulty => {
   const t = clamp01(lv / 12);
   const angerFactor = 1 + (anger / 100) * 0.5;
   return {
-    belt: lerp(1.0, 2.2, t) * angerFactor, // Sebzeler daha yavaş akar
-    spawnMs: Math.round(lerp(1200, 900, t) / angerFactor), // Paketler daha seyrek gelir
+    belt: lerp(1.0, 1.6, t) * angerFactor, // Sebzeler daha yavaş akar
+    spawnMs: Math.round(lerp(1500, 1000, t) / angerFactor), // Paketler daha seyrek gelir
     packCap: 2 + (lv > 6 ? 1 : 0),
     rottenRate: lerp(0.0, 0.3, t),
     powerRate: lerp(0.02, 0.08, t),
@@ -100,7 +101,7 @@ type Difficulty = {
   orderVar: number; // ekstra rastgele parça
 };
 
-const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
+const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress, username }) => {
   /* ------------------------------- Refs/State ------------------------------ */
   const sceneRef = useRef<HTMLDivElement | null>(null);
   const chefRef = useRef<HTMLImageElement | null>(null);
@@ -172,10 +173,10 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
       { key: "mushroom", src: "/mushroom.png", hits: 1, score: 20, label: "Mushroom" },
       { key: "onion", src: "/onion.png", hits: 2, score: 25, label: "Onion" },
       { key: "potato", src: "/potato.png", hits: 2, score: 25, label: "Potato" },
-      { key: "pumpkin", src: "/pumpkin.png", hits: 3, score: 45, label: "Pumpkin", style: { transform: "scale(1.6)" } },
+      { key: "pumpkin", src: "/pumpkin.png", hits: 3, score: 45, label: "Pumpkin", style: { transform: "scale(1.2)" } },
       { key: "tomato", src: "/tomato.png", hits: 1, score: 25, label: "Tomato" },
       { key: "tomato1", src: "/tomato1.png", hits: 1, score: 25, label: "Tomato" },
-      { key: "watermelon", src: "/watermelon.png", hits: 5, score: 100, label: "Watermelon", style: { transform: "scale(1.9)" } },
+      { key: "watermelon", src: "/watermelon.png", hits: 5, score: 100, label: "Watermelon", style: { transform: "scale(1.2)" } },
     ],
     []
   );
@@ -586,7 +587,8 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
               const hx = cx - VEG_W / 2,
                 hy = cy - VEG_H / 2;
               const hit = intersect(zone.x, zone.y, zone.w, zone.h, hx, hy, VEG_W, VEG_H);
-              return acc2.item || !hit ? acc2 : { item: v, pack: p };
+              // DEĞİŞİKLİK: Eğer sebze dead ise işlem yapma
+              return acc2.item || !hit || v.dead || v.hp <= 0 ? acc2 : { item: v, pack: p };
             }, acc),
       {}
     );
@@ -973,7 +975,7 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
 
         {/* HUD */}
         <div className="hud" style={{ position: "absolute", top: "10px", left: "10px", zIndex: 9, fontWeight: "bold", fontSize: "18px" }}>
-          {"Score: "} <span id="score" ref={scoreRef}>0</span>
+          Score: <span id="score" ref={scoreRef}>0</span>
           {playerAddress && (
             <>
               {" | "}
@@ -982,12 +984,20 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
               </span>
             </>
           )}
+          {username && (
+            <>
+              {" | "}
+              <span style={{ color: "#fbff00ff", fontWeight: 700 }}>
+                {username}
+              </span>
+            </>
+          )}
           {" | "}
-          {"Combo: "} <span id="combo" ref={comboRef}>0</span> {" | "}
-          {"Time: "} <span id="orderTimer" ref={timerRef}>--</span> {" | "}
-          {"Anger: "}
-          <span style={{ color: currentMood.color, fontWeight: "bold" }}>{anger}</span>
-          {" "}
+          Combo: <span id="combo" ref={comboRef}>0</span>
+          {" | "}
+          Time: <span id="orderTimer" ref={timerRef}>--</span>
+          {" | "}
+          Anger: <span style={{ color: currentMood.color, fontWeight: "bold" }}>{anger}</span>
           <span style={{ color: currentMood.color, marginLeft: 8 }}>{currentMood.mood}</span>
         </div>
 

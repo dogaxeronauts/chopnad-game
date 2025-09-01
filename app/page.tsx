@@ -5,9 +5,11 @@ import ChoppingGame from './components/ChoppingGame';
 import AuthComponent from './components/AuthComponent';
 import ScoreDebugger from './components/ScoreDebugger';
 import ProfileCard from './profile-card/ProfileCard';
+import { useMonadGamesUser } from "./hooks/useMonadGamesUser";
 
 export default function Home() {
   const [playerAddress, setPlayerAddress] = useState<string>("");
+  const { user, isLoading, error } = useMonadGamesUser(playerAddress);
   const { logout } = usePrivy(); // Privy logout fonksiyonu
 
   const handleLogout = async () => {
@@ -60,7 +62,7 @@ export default function Home() {
           >
             Logout
           </button>
-          <ChoppingGame playerAddress={playerAddress} />
+          <ChoppingGame playerAddress={playerAddress} username={user?.username} />
           <ScoreDebugger playerAddress={playerAddress} />
         </div>
       )}
