@@ -43,7 +43,7 @@ type Pack = { x: number; items: PackItem[]; el?: HTMLDivElement };
 const SCENE_W = 1152;
 const COUNTER_Y = 490;
 const PACK_Y = COUNTER_Y - 14;
-const SPEED = 2.4;
+const SPEED = 2.5;
 const CHOP_BASE = 60;
 
 const VEG_W = 72;
@@ -985,15 +985,13 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
             background: "#fff",
             color: "#222",
             border: "2px solid #4caf50",
-            padding: "24px 32px",
+            padding: "24px 24px",
             borderRadius: "18px",
-            minWidth: "420px",
+            minWidth: "460px",
             maxWidth: "420px",
-            minHeight: "120px",
-            maxHeight: "220px",
-            left: "calc(100% - 200px)",
-            bottom: "340px",
-            transform: "translateX(-50%)",
+            right: "50px",
+            top: "80px", // Üstten sabit, aşağıya doğru uzar
+            transform: "translateY(20%)",
             display: "none",
             boxShadow: "0 8px 32px #0002",
             imageRendering: "pixelated",
@@ -1001,7 +999,7 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
             fontWeight: 600,
             lineHeight: "1.4",
             letterSpacing: "0.5px",
-            overflow: "hidden", // Scroll yok, taşma yok
+            overflow: "visible", // Taşma olmasın
           } as React.CSSProperties}
         />
 
@@ -1069,7 +1067,7 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress }) => {
           top: 0,
           left: `calc(50% + ${SCENE_W / 2}px + 24px)`, // 24px boşluk bırak
           width: "420px",
-          minHeight: "400px",
+          minHeight: "460px",
           maxHeight: "90vh",
           background: "rgba(255,255,255,0.97)",
           color: "#222",
