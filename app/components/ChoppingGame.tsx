@@ -1001,12 +1001,32 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({ playerAddress, username }) 
               </span>
             </>
           )}
-          {username && (
+          {username ? (
             <>
               {" | "}
               <span style={{ color: "#fbff00ff", fontWeight: 700 }}>
                 {username}
               </span>
+            </>
+          ) : (
+            <>
+              {" | "}
+              <button
+                style={{
+                  background: "#8e24aa",
+                  color: "#fff",
+                  fontWeight: 700,
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "4px 14px",
+                  fontSize: "15px",
+                  cursor: "pointer",
+                  marginLeft: "4px",
+                }}
+                onClick={() => window.open("https://monad-games-id-site.vercel.app/", "_blank")}
+              >
+                First Get a Username
+              </button>
             </>
           )}
           {" | "}
