@@ -167,7 +167,9 @@ export async function POST(request: NextRequest) {
     const walletClient = createWalletClient({
       account,
       chain: monadTestnet,
-      transport: http(ALCHEMY_RPC_URL),
+      transport: http(
+        "https://monad-testnet.g.alchemy.com/v2/lwn9CeZqstGjntAwQmLIO"
+      ),
     });
 
     // Call the updatePlayerData function
