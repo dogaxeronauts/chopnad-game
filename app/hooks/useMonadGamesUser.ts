@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 interface MonadGamesUser {
   id: number;
@@ -18,7 +18,9 @@ interface UseMonadGamesUserReturn {
   error: string | null;
 }
 
-export function useMonadGamesUser(walletAddress: string): UseMonadGamesUserReturn {
+export function useMonadGamesUser(
+  walletAddress: string
+): UseMonadGamesUserReturn {
   const [user, setUser] = useState<MonadGamesUser | null>(null);
   const [hasUsername, setHasUsername] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -39,7 +41,7 @@ export function useMonadGamesUser(walletAddress: string): UseMonadGamesUserRetur
 
       try {
         const response = await fetch(
-          `https://monad-games-id-site.vercel.app/api/check-wallet?wallet=${walletAddress}`
+          `https://monadclip.vercel.app/api/check-wallet?wallet=${walletAddress}`
         );
 
         if (!response.ok) {
@@ -47,11 +49,11 @@ export function useMonadGamesUser(walletAddress: string): UseMonadGamesUserRetur
         }
 
         const data: UserResponse = await response.json();
-        
+
         setHasUsername(data.hasUsername);
         setUser(data.user || null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
+        setError(err instanceof Error ? err.message : "An error occurred");
         setHasUsername(false);
         setUser(null);
       } finally {
