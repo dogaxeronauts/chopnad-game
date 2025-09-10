@@ -1,6 +1,7 @@
 import { createPublicClient, http } from "viem";
 import { monadTestnet } from "viem/chains";
 import { GAME_CONTRACT_ABI } from "./contract-abi";
+import "dotenv/config";
 
 // Contract configuration
 export const CONTRACT_ADDRESS =
