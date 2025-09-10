@@ -4,7 +4,7 @@ import { GAME_CONTRACT_ABI } from "./contract-abi";
 
 // Contract configuration
 export const CONTRACT_ADDRESS =
-  "0x4b91a6541Cab9B2256EA7E6787c0aa6BE38b39c0" as const;
+  "0xceCBFF203C8B6044F52CE23D914A1bfD997541A4" as const;
 
 // Export the ABI for use in other files
 export const CONTRACT_ABI = GAME_CONTRACT_ABI;
