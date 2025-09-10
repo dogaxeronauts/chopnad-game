@@ -19,6 +19,7 @@ import {
   markRequestProcessing,
   markRequestComplete,
 } from "@/app/lib/request-deduplication";
+import "dotenv/config";
 
 export async function POST(request: NextRequest) {
   try {
