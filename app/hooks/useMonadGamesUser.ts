@@ -41,7 +41,7 @@ export function useMonadGamesUser(
 
       try {
         const response = await fetch(
-          `https://monadclip.vercel.app/api/check-wallet?wallet=${walletAddress}`
+          `https://www.monadclip.fun/api/check-wallet?wallet=${walletAddress}`
         );
 
         if (!response.ok) {

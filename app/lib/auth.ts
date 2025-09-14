@@ -55,6 +55,8 @@ export function validateOrigin(request: NextRequest): boolean {
     'http://localhost:3000',
     'https://localhost:3000',
     'https://chopupnad.vercel.app',
+    'https://www.chopupnad.fun/',
+    'https://chopupnad.fun/',
     process.env.NEXT_PUBLIC_APP_URL
   ].filter(Boolean);
 

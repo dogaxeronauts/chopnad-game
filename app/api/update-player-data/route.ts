@@ -21,6 +21,9 @@ import {
 } from "@/app/lib/request-deduplication";
 import "dotenv/config";
 
+// Add this line after imports
+let currentUrlIndex = 0;
+
 export async function POST(request: NextRequest) {
   try {
     //* Security checks - Origin validation first
@@ -163,12 +166,27 @@ export async function POST(request: NextRequest) {
     const account = privateKeyToAccount(privateKey as `0x${string}`);
 
     // Create wallet client
-    const ALCHEMY_RPC_URL = process.env.ALCHEMY_RPC_URL;
+    const ALCHEMY_RPC_URLS = [
+      process.env.ALCHEMY_RPC_URL,
+      process.env.ALCHEMY_RPC_URL_2,
+      process.env.ALCHEMY_RPC_URL_3,
+      process.env.ALCHEMY_RPC_URL_4,
+      process.env.ALCHEMY_RPC_URL_5,
+    ].filter(Boolean);
+
+    const selectedUrl = ALCHEMY_RPC_URLS[currentUrlIndex % ALCHEMY_RPC_URLS.length];
+    const usedIndex = currentUrlIndex % ALCHEMY_RPC_URLS.length;
+    currentUrlIndex = (currentUrlIndex + 1) % ALCHEMY_RPC_URLS.length;
+
     const walletClient = createWalletClient({
       account,
       chain: monadTestnet,
-      transport: http(ALCHEMY_RPC_URL),
+      transport: http(selectedUrl),
     });
+
+    console.log(`Using RPC URL index: ${usedIndex}`);
+    const urlDomain = selectedUrl ? new URL(selectedUrl).hostname : 'unknown';
+    console.log(`RPC Domain: ${urlDomain}`);
 
     // Call the updatePlayerData function
     const hash = await walletClient.writeContract({

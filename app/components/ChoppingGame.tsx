@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { TransactionQueue } from "../lib/score-api";
+import { TransactionQueue, getPlayerTotalData } from "../lib/score-api";
 import { GAME_CONFIG } from "../lib/game-config";
 import toast from "react-hot-toast";
 
@@ -50,7 +50,7 @@ type Pack = { x: number; items: PackItem[]; el?: HTMLDivElement };
 const SCENE_W = 1152;
 const COUNTER_Y = 490;
 const PACK_Y = COUNTER_Y - 14;
-const SPEED = 2.5;
+const SPEED = 2.8;
 const CHOP_BASE = 60;
 
 const VEG_W = 72;
@@ -1025,6 +1025,33 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
       }, 700);
     })();
 
+  const getCurrentTier = (score: number) => {
+    const tiers = [
+      { threshold: 200000, name: "ChopMaster-Nad On Fire", color: "#ffc107", rarity: "Legendary" },
+      { threshold: 50000, name: "Iron-Chef Nad", color: "#a855f7", rarity: "Epic" },
+      { threshold: 10000, name: "Sous-Chef Nad", color: "#3b82f6", rarity: "Rare" },
+      { threshold: 0, name: "Kitchen-Rookie Nad", color: "#666", rarity: "Common" }
+    ];
+    return tiers.find(tier => score >= tier.threshold) || tiers[tiers.length - 1];
+  };
+
+  const handleCheckCurrentTier = async () => {
+    const validAddress = playerAddress && playerAddress.length > 0;
+    validAddress && (async () => {
+      try {
+        const totalData = await getPlayerTotalData(playerAddress);
+        setBlockchainData(totalData);
+      } catch (error) {
+        console.error('Error fetching current tier:', error);
+      }
+    })();
+  };
+
+  const [blockchainData, setBlockchainData] = useState<{
+    totalScore: string;
+    totalTransactions: string;
+  } | null>(null);
+
   /* ------------------------------- Oyun Döngüsü ---------------------------- */
   const loop = (ts: number) => {
     const diffL = diffCurve(levelRef.current);
@@ -1113,8 +1140,270 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
         fontFamily: "monospace",
         minHeight: "0vh",
         position: "relative",
+        userSelect: "none", // Bu satırı ekle
+        WebkitUserSelect: "none", // Safari için
+        MozUserSelect: "none", // Firefox için
+        msUserSelect: "none",
       }}
     >
+      {/* NFT Tiers Panel - Sol tarafta */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: `calc(50% - ${SCENE_W / 2}px - 420px)`, // Oyun penceresinin solunda
+          width: "400px",
+          minHeight: "600px",
+          background: "rgba(20, 25, 35, 0.95)",
+          color: "#fff",
+          fontFamily: "monospace",
+          fontSize: "14px",
+          borderRight: "2px solid #8e24aa",
+          borderRadius: "12px",
+          padding: "20px",
+          zIndex: 100,
+          boxShadow: "0 0 20px rgba(142, 36, 170, 0.3)",
+          overflowY: "auto",
+        }}
+      >
+        <div style={{ 
+          fontWeight: 700, 
+          fontSize: "18px", 
+          marginBottom: "16px",
+          textAlign: "center",
+          color: "#8e24aa",
+          textTransform: "uppercase",
+          letterSpacing: "1px"
+        }}>
+          🏆 NFT Tiers
+        </div>
+        
+        <div style={{ 
+          fontSize: "12px", 
+          marginBottom: "20px", 
+          textAlign: "center",
+          color: "#aaa",
+          lineHeight: "1.4"
+        }}>
+          Allowlist Claim: <br />
+          <span style={{ color: "#4caf50", fontWeight: 700 }}>15.10.2025 19:00</span>
+        </div>
+
+        {/* Kitchen-Rookie Nad */}
+        <div style={{
+          background: "rgba(255,255,255,0.05)",
+          borderRadius: "10px",
+          padding: "16px",
+          marginBottom: "12px",
+          border: "1px solid rgba(255,255,255,0.1)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", marginBottom: "12px" }}>
+            <img 
+              src="/rookienad.gif" 
+              alt="Kitchen-Rookie"
+              style={{
+                width: "50px",
+                height: "50px",
+                borderRadius: "8px",
+                marginRight: "12px",
+                border: "2px solid #666"
+              }}
+            />
+            <div>
+              <div style={{ fontWeight: 700, color: "#fff" }}>Kitchen-Rookie Nad</div>
+              <div style={{ 
+                fontSize: "11px", 
+                color: "#666",
+                background: "rgba(102,102,102,0.2)",
+                padding: "2px 8px",
+                borderRadius: "4px",
+                display: "inline-block",
+                marginTop: "4px"
+              }}>
+                Common
+              </div>
+            </div>
+          </div>
+          <div style={{ fontSize: "12px", color: "#ccc" }}>
+            Score: <span style={{ color: "#4caf50", fontWeight: 700 }}>0 - 9,999</span>
+          </div>
+        </div>
+
+        {/* Sous-Chef Nad */}
+        <div style={{
+          background: "rgba(255,255,255,0.05)",
+          borderRadius: "10px",
+          padding: "16px",
+          marginBottom: "12px",
+          border: "1px solid rgba(59, 130, 246, 0.3)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", marginBottom: "12px" }}>
+            <img 
+              src="/souschefnad.gif" 
+              alt="Sous-Chef"
+              style={{
+                width: "50px",
+                height: "50px",
+                borderRadius: "8px",
+                marginRight: "12px",
+                border: "2px solid #3b82f6"
+              }}
+            />
+            <div>
+              <div style={{ fontWeight: 700, color: "#fff" }}>Sous-Chef Nad</div>
+              <div style={{ 
+                fontSize: "11px", 
+                color: "#3b82f6",
+                background: "rgba(59, 130, 246, 0.2)",
+                padding: "2px 8px",
+                borderRadius: "4px",
+                display: "inline-block",
+                marginTop: "4px"
+              }}>
+                Rare
+              </div>
+            </div>
+          </div>
+          <div style={{ fontSize: "12px", color: "#ccc" }}>
+            Score: <span style={{ color: "#4caf50", fontWeight: 700 }}>10,000 - 49,999</span>
+          </div>
+        </div>
+
+        {/* Iron-Chef Nad */}
+        <div style={{
+          background: "rgba(255,255,255,0.05)",
+          borderRadius: "10px",
+          padding: "16px",
+          marginBottom: "12px",
+          border: "1px solid rgba(168, 85, 247, 0.3)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", marginBottom: "12px" }}>
+            <img 
+              src="ironchefnad.gif" 
+              alt="Iron-Chef"
+              style={{
+                width: "50px",
+                height: "50px",
+                borderRadius: "8px",
+                marginRight: "12px",
+                border: "2px solid #a855f7"
+              }}
+            />
+            <div>
+              <div style={{ fontWeight: 700, color: "#fff" }}>Iron-Chef Nad</div>
+              <div style={{ 
+                fontSize: "11px", 
+                color: "#a855f7",
+                background: "rgba(168, 85, 247, 0.2)",
+                padding: "2px 8px",
+                borderRadius: "4px",
+                display: "inline-block",
+                marginTop: "4px"
+              }}>
+                Epic
+              </div>
+            </div>
+          </div>
+          <div style={{ fontSize: "12px", color: "#ccc" }}>
+            Score: <span style={{ color: "#4caf50", fontWeight: 700 }}>50,000 - 199,999</span>
+          </div>
+        </div>
+
+        {/* ChopMaster-Nad On Fire */}
+        <div style={{
+          background: "rgba(255,255,255,0.05)",
+          borderRadius: "10px",
+          padding: "16px",
+          marginBottom: "20px",
+          border: "1px solid rgba(255, 193, 7, 0.3)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", marginBottom: "12px" }}>
+            <img 
+              src="chopmasternadonfire.gif" 
+              alt="ChopMaster-Fire"
+              style={{
+                width: "50px",
+                height: "50px",
+                borderRadius: "8px",
+                marginRight: "12px",
+                border: "2px solid #ffc107"
+              }}
+            />
+            <div>
+              <div style={{ fontWeight: 700, color: "#fff" }}>ChopMaster-Nad On Fire</div>
+              <div style={{ 
+                fontSize: "11px", 
+                color: "#ffc107",
+                background: "rgba(255, 193, 7, 0.2)",
+                padding: "2px 8px",
+                borderRadius: "4px",
+                display: "inline-block",
+                marginTop: "4px"
+              }}>
+                Legendary
+              </div>
+            </div>
+          </div>
+          <div style={{ fontSize: "12px", color: "#ccc" }}>
+            Score: <span style={{ color: "#4caf50", fontWeight: 700 }}>200,000+</span>
+          </div>
+        </div>
+
+        {/* Check Current Tier Button */}
+        <button
+          style={{
+            width: "100%",
+            padding: "12px",
+            background: "linear-gradient(135deg, #8e24aa, #673ab7)",
+            color: "#fff",
+            border: "none",
+            borderRadius: "8px",
+            fontWeight: 700,
+            fontSize: "14px",
+            cursor: "pointer",
+            boxShadow: "0 4px 12px rgba(142, 36, 170, 0.3)",
+            transition: "all 0.2s",
+            textTransform: "uppercase",
+            letterSpacing: "1px"
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = "translateY(-2px)";
+            e.currentTarget.style.boxShadow = "0 6px 16px rgba(142, 36, 170, 0.4)";
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 4px 12px rgba(142, 36, 170, 0.3)";
+          }}
+          onClick={handleCheckCurrentTier}
+        >
+          🎯 Check Current Tier
+        </button>
+
+        <div style={{ 
+          fontSize: "px", 
+          marginTop: "12px", 
+          textAlign: "center",
+          color: "#666",
+          lineHeight: "1.3"
+        }}>
+          Your current score: <span style={{ color: "#4caf50", fontWeight: 700 }}>{blockchainData?.totalScore || "Click to check"}</span>
+        </div>
+        {blockchainData?.totalScore && (() => {
+          const currentTier = getCurrentTier(parseInt(blockchainData.totalScore));
+          return (
+            <div style={{ marginTop: "8px", textAlign: "center"}}>
+              Your current tier: <span style={{ 
+                color: currentTier.color, 
+                fontWeight: 700,
+                fontSize: "16px" 
+              }}>
+                {currentTier.name}
+              </span>
+            </div>
+          );
+        })()}
+      </div>
+
       <div
         className="scene"
         id="scene"
@@ -1288,7 +1577,7 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
                   marginLeft: "4px",
                 }}
                 onClick={() =>
-                  window.open("https://monadclip.vercel.app/", "_blank")
+                  window.open("https://www.monadclip.fun/", "_blank")
                 }
               >
                 First Get a Username

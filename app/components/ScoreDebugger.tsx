@@ -5,6 +5,7 @@ import { GAME_CONFIG } from '../lib/game-config';
 
 interface ScoreDebuggerProps {
   playerAddress: string;
+  onDataUpdate?: (totalData: PlayerData | null, gameData: GameData | null) => void;
 }
 
 interface PlayerData {
@@ -17,7 +18,7 @@ interface GameData {
   transactions: string;
 }
 
-export default function ScoreDebugger({ playerAddress }: ScoreDebuggerProps) {
+export default function ScoreDebugger({ playerAddress, onDataUpdate }: ScoreDebuggerProps) {
   const [totalData, setTotalData] = useState<PlayerData | null>(null);
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,12 +35,13 @@ export default function ScoreDebugger({ playerAddress }: ScoreDebuggerProps) {
       ]);
       setTotalData(total);
       setGameData(game);
+      onDataUpdate?.(total, game);
     } catch (error) {
       console.error('Error fetching player data:', error);
     } finally {
       setLoading(false);
     }
-  }, [playerAddress]);
+  }, [playerAddress, onDataUpdate]);
 
   useEffect(() => {
     if (playerAddress && isVisible) {
