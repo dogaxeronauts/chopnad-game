@@ -1151,8 +1151,8 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
         style={{
           position: "absolute",
           top: 0,
-          left: `calc(50% - ${SCENE_W / 2}px - 420px)`, // Oyun penceresinin solunda
-          width: "400px",
+          left: `calc(50% - ${SCENE_W / 2}px - 360px)`, // Oyun penceresinin solunda
+          width: "340px",
           minHeight: "600px",
           background: "rgba(20, 25, 35, 0.95)",
           color: "#fff",
@@ -1712,21 +1712,21 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
           position: "absolute",
           top: 0,
           left: `calc(50% + ${SCENE_W / 2}px + 24px)`, // 24px boşluk bırak
-          width: "420px",
-          minHeight: "460px",
+          width: "340px",
+          minHeight: "400px",
           maxHeight: "90vh",
           background: "rgba(255,255,255,0.97)",
           color: "#222",
           fontFamily: "monospace",
-          fontSize: "15px",
+          fontSize: "13.2px",
           borderLeft: "2px solid #4caf50",
-          padding: "18px 22px 18px 22px",
+          padding: "12px 22px 18px 13px",
           zIndex: 100,
           boxShadow: "0 0 12px #0002",
           overflowY: "auto",
         }}
       >
-        <div style={{ fontWeight: 700, fontSize: "18px", marginBottom: "8px" }}>
+        <div style={{ fontWeight: 700, fontSize: "16px", marginBottom: "8px" }}>
           Game Guide & Scoring
         </div>
         <div style={{ marginBottom: "10px", lineHeight: "1.6" }}>
@@ -1757,7 +1757,6 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
           style={{
             display: "flex",
             flexWrap: "wrap",
-            gap: "12px",
             alignItems: "center",
           }}
         >
@@ -1769,7 +1768,7 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "6px",
+                  gap: "10px",
                   background: "#f7f7fa",
                   borderRadius: "8px",
                   padding: "4px 10px",
