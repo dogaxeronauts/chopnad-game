@@ -348,6 +348,7 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
         loadImage(d.src).then((img) => Object.assign(d, { img }))
       )
     ).then(() => {
+      setAnger(0);
       newOrder();
       requestAnimationFrame(loop);
     });
@@ -1665,6 +1666,8 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
               setScore(0);
               setCombo(0);
               setOrder(null);
+              angerRef.current = 0;
+              setAnger(0);
               orderRef.current = null;
               runningRef.current = true;
               lastSpawnRef.current = 0;
