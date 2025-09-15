@@ -829,14 +829,14 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
 
   const updateScore = (hitItem: PackItem) => {
     const base = hitItem.def.score ?? 0;
-    setScore((s) => s + base);
+    setScore((s) => Math.max(0, s + base));
     const contributes =
       orderRef.current &&
       orderRef.current.items.has(hitItem.key.replace(/^rotten:/, ""));
     // Yanlış sebze: burada anger artışı ve feedback
     if (!contributes) {
       setCombo(0);
-      setScore((s) => s - 15);
+      setScore((s) => Math.max(0, s - 15));
       angerRef.current = Math.min(100, angerRef.current + 12);
       setAnger(angerRef.current);
       beep(120, 0.1);
@@ -860,14 +860,14 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
       isKnife(hitItem.key) &&
         ((powerUntilRef.current = now() + 6000), ding(), undefined),
       isRotten(hitItem.key) &&
-        ((setScore((s) => s - 30), setCombo(0)), undefined),
+        ((setScore((s) => Math.max(0, s - 30)), setCombo(0)), undefined),
       !isKnife(hitItem.key) &&
         !isRotten(hitItem.key) &&
         orderRef.current &&
         (orderRef.current.items.has(hitItem.key) &&
           (() => {
             const add = (hitItem.def.score || 50) * 3;
-            setScore((s) => s + add + combo * 25);
+            setScore((s) => Math.max(0, s + add + combo * 25));
             setCombo((c) => Math.min(c + 1, 99));
             const k = hitItem.key;
             const ch = orderRef.current!.chopped.get(k) || 0;
@@ -1092,7 +1092,7 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
 
     // miss heat — yavaş sönüm
     heatRef.current = Math.max(0, heatRef.current - 0.002);
-    (heatRef.current > 0.7 && setScore((s) => s - 0.2)) || undefined;
+    (heatRef.current > 0.7 && setScore((s) => Math.max(0, s - 0.2))) || undefined;
 
     // uçușlar
     stepFlights(16);
