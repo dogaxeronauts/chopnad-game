@@ -18,8 +18,29 @@ export function generateSessionToken(playerAddress: string, timestamp: number): 
   return crypto.createHash('sha256').update(data).digest('hex');
 }
 
-// Validate session token with player address verification
+// Add session token storage
+const usedSessionTokens = new Set<string>();
+
+// Clean up old tokens periodically (run every 10 minutes)
+setInterval(() => {
+  // Clear all tokens older than 30 minutes
+  // Since we can't track timestamps in a Set, we'll clear all tokens periodically
+  // This is acceptable since tokens are only valid for 5 minutes anyway
+  usedSessionTokens.clear();
+}, 10 * 60 * 1000);
+
+// Validate session token with player address verification and one-time use
 export function validateSessionToken(token: string, playerAddress: string, timestampWindow: number = 300000): boolean {
+  // Check if token has already been used - FIRST CHECK
+  if (usedSessionTokens.has(token)) {
+    console.log('Token already used:', token);
+    return false;
+  }
+  
+  // Mark token as used IMMEDIATELY to prevent race conditions
+  usedSessionTokens.add(token);
+  console.log('Token added to used set:', token);
+  
   const now = Date.now();
   
   // Check tokens within the timestamp window (default 5 minutes)
@@ -27,10 +48,15 @@ export function validateSessionToken(token: string, playerAddress: string, times
     const timestamp = now - i;
     const expectedToken = generateSessionToken(playerAddress, Math.floor(timestamp / 30000) * 30000);
     if (token === expectedToken) {
+      console.log('Token validated and confirmed as used:', token);
+      console.log('Used tokens count:', usedSessionTokens.size);
       return true;
     }
   }
   
+  // If token is invalid, remove it from used tokens
+  usedSessionTokens.delete(token);
+  console.log('Invalid token, removed from used set:', token);
   return false;
 }
 

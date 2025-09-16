@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       sessionToken,
-      expiresAt: timestamp + 300000, // 5 minutes from token timestamp
+      expiresAt: timestamp + 5000, // 5 seconds from token timestamp
     });
 
   } catch (error) {
