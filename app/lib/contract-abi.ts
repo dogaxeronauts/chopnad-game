@@ -17,6 +17,7 @@ export const GAME_CONTRACT_ABI = [
       { indexed: true, internalType: "address", name: "game", type: "address" },
       { indexed: false, internalType: "string", name: "name", type: "string" },
       { indexed: false, internalType: "string", name: "image", type: "string" },
+      { indexed: false, internalType: "string", name: "description", type: "string" },
       { indexed: false, internalType: "string", name: "url", type: "string" },
     ],
     name: "GameRegistered",
@@ -131,12 +132,31 @@ export const GAME_CONTRACT_ABI = [
     type: "function",
   },
   {
+    inputs: [
+      {
+        components: [
+          { internalType: "address", name: "player", type: "address" },
+          { internalType: "uint256", name: "score", type: "uint256" },
+          { internalType: "uint256", name: "transactions", type: "uint256" },
+        ],
+        internalType: "struct Leaderboard.PlayerData[]",
+        name: "_playerDatas",
+        type: "tuple[]",
+      },
+    ],
+    name: "batchUpdatePlayerData",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
     inputs: [{ internalType: "address", name: "", type: "address" }],
     name: "games",
     outputs: [
       { internalType: "address", name: "game", type: "address" },
       { internalType: "string", name: "image", type: "string" },
       { internalType: "string", name: "name", type: "string" },
+      { internalType: "string", name: "description", type: "string" },
       { internalType: "string", name: "url", type: "string" },
     ],
     stateMutability: "view",
@@ -184,12 +204,40 @@ export const GAME_CONTRACT_ABI = [
   },
   {
     inputs: [
-      { internalType: "address", name: "_game", type: "address" },
-      { internalType: "string", name: "_name", type: "string" },
-      { internalType: "string", name: "_image", type: "string" },
-      { internalType: "string", name: "_url", type: "string" },
+      {
+        components: [
+          { internalType: "address", name: "game", type: "address" },
+          { internalType: "string", name: "image", type: "string" },
+          { internalType: "string", name: "name", type: "string" },
+          { internalType: "string", name: "description", type: "string" },
+          { internalType: "string", name: "url", type: "string" },
+        ],
+        internalType: "struct Leaderboard.Game",
+        name: "_game",
+        type: "tuple",
+      },
     ],
     name: "registerGame",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        components: [
+          { internalType: "address", name: "game", type: "address" },
+          { internalType: "string", name: "image", type: "string" },
+          { internalType: "string", name: "name", type: "string" },
+          { internalType: "string", name: "description", type: "string" },
+          { internalType: "string", name: "url", type: "string" },
+        ],
+        internalType: "struct Leaderboard.Game[]",
+        name: "_games",
+        type: "tuple[]",
+      },
+    ],
+    name: "registerGames",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -244,9 +292,16 @@ export const GAME_CONTRACT_ABI = [
   },
   {
     inputs: [
-      { internalType: "address", name: "player", type: "address" },
-      { internalType: "uint256", name: "scoreAmount", type: "uint256" },
-      { internalType: "uint256", name: "transactionAmount", type: "uint256" },
+      {
+        components: [
+          { internalType: "address", name: "player", type: "address" },
+          { internalType: "uint256", name: "score", type: "uint256" },
+          { internalType: "uint256", name: "transactions", type: "uint256" },
+        ],
+        internalType: "struct Leaderboard.PlayerData",
+        name: "_playerData",
+        type: "tuple",
+      },
     ],
     name: "updatePlayerData",
     outputs: [],

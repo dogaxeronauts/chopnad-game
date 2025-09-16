@@ -194,9 +194,11 @@ export async function POST(request: NextRequest) {
       abi: CONTRACT_ABI,
       functionName: "updatePlayerData",
       args: [
-        playerAddress as `0x${string}`,
-        BigInt(scoreAmount),
-        BigInt(transactionAmount),
+        {
+          player: playerAddress as `0x${string}`,
+          score: BigInt(scoreAmount),
+          transactions: BigInt(transactionAmount),
+        }
       ],
     });
 
