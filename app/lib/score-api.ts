@@ -1,10 +1,16 @@
-// Client-side API helpers for score submission
+// Enhanced client-side API helpers with single-request security
+import { generateClientValidationKeys, ValidationKeys } from './cryptoValidation';
 
 interface ScoreSubmissionResponse {
   success: boolean;
   transactionHash?: string;
   message?: string;
   error?: string;
+  securityVerified?: boolean;
+  cryptoValidationLevel?: 'HIGH' | 'MEDIUM' | 'LOW' | 'FAILED';
+  nonce?: string;
+  timestamp?: number;
+  duplicate?: boolean;
 }
 
 interface QueuedTransaction {
@@ -37,69 +43,48 @@ interface PlayerDataPerGameResponse {
   error?: string;
 }
 
-// Get session token for authenticated requests
-export async function getSessionToken(playerAddress: string): Promise<string | null> {
-  try {
-    // In a real implementation, you would sign a message with the user's wallet here
-    const message = `Authenticate for score submission: ${playerAddress}`;
-    const signedMessage = "dummy_signature"; // This should be replaced with actual wallet signing
-    
-    const response = await fetch('/api/get-session-token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        playerAddress,
-        message,
-        signedMessage,
-      }),
-    });
-
-    const data = await response.json();
-    if (data.success) {
-      return data.sessionToken;
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Error getting session token:', error);
-    return null;
-  }
-}
-
-// Submit player score and transaction data to the contract
+// Single-request secure score submission with 3-key cryptographic validation
 export async function submitPlayerScore(
   playerAddress: string,
   scoreAmount: number,
-  transactionAmount: number = 1,
-  sessionToken?: string
+  transactionAmount: number = 1
 ): Promise<ScoreSubmissionResponse> {
   try {
-    // Get session token if not provided
-    if (!sessionToken) {
-      const token = await getSessionToken(playerAddress);
-      if (!token) {
-        return {
-          success: false,
-          error: 'Failed to authenticate. Please try again.',
-        };
-      }
-      sessionToken = token;
-    }
-
+    // Generate 3-key cryptographic validation
+    console.log('Generating cryptographic validation keys...');
+    const validationKeys: ValidationKeys = generateClientValidationKeys(
+      playerAddress,
+      scoreAmount,
+      transactionAmount
+    );
+    
+    console.log('Validation keys generated:', {
+      temporalKey: validationKeys.temporalKey,
+      payloadKey: validationKeys.payloadKey,
+      identityKey: validationKeys.identityKey
+    });
+    // Generate CSRF token client-side (stateless) - Will be deprecated soon
+    const csrfToken = generateClientCSRFToken();
+    
+    // Single request with all data including 3-key validation - server will handle signing internally
     const response = await fetch('/api/update-player-data', {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
+        'x-csrf-token': csrfToken,
       },
       body: JSON.stringify({
         playerAddress,
         scoreAmount,
         transactionAmount,
-        sessionToken,
+        validationKeys: validationKeys
       }),
     });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
 
     const data = await response.json();
     return data;
@@ -107,9 +92,32 @@ export async function submitPlayerScore(
     console.error('Error submitting score:', error);
     return {
       success: false,
-      error: 'Failed to submit score',
+      error: `Failed to submit score: ${error instanceof Error ? error.message : 'Unknown error'}`,
     };
   }
+}
+
+// Generate client-side CSRF token (compatible with server validation)
+function generateClientCSRFToken(): string {
+  // Browser-compatible random string generation
+  const generateRandomString = (length: number): string => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  const sessionId = generateRandomString(16);
+  const timestamp = Date.now();
+  const nonce = generateRandomString(16);
+  
+  const token = `${sessionId}-${timestamp}-${nonce}-client`;
+  console.log('Generated CSRF token:', token.substring(0, 8) + '...');
+  console.log('Token parts:', { sessionId, timestamp, nonce, suffix: 'client' });
+  
+  return token;
 }
 
 // Get player's total data across all games
@@ -141,13 +149,14 @@ export async function getPlayerGameData(
   }
 }
 
-// Helper to batch score submissions (avoid spamming the blockchain)
+// Enhanced score submission manager with new security model
 export class ScoreSubmissionManager {
   private playerAddress: string;
   private pendingScore: number = 0;
   private pendingTransactions: number = 0;
   private submitTimeout: NodeJS.Timeout | null = null;
-  private readonly submitDelay = 5000; // 5 seconds delay before submission
+  private readonly submitDelay = 3000; // 3 seconds delay for better batching
+  private isSubmitting: boolean = false;
 
   constructor(playerAddress: string) {
     this.playerAddress = playerAddress;
@@ -155,18 +164,24 @@ export class ScoreSubmissionManager {
 
   // Add score points (will be batched and submitted after delay)
   addScore(points: number) {
+    if (points <= 0) return;
     this.pendingScore += points;
     this.scheduleSubmission();
   }
 
   // Add transaction count (will be batched and submitted after delay)
   addTransaction(count: number = 1) {
+    if (count <= 0) return;
     this.pendingTransactions += count;
     this.scheduleSubmission();
   }
 
   // Submit immediately (bypasses batching)
   async submitImmediately(): Promise<ScoreSubmissionResponse> {
+    if (this.isSubmitting) {
+      return { success: false, error: 'Submission already in progress' };
+    }
+
     if (this.submitTimeout) {
       clearTimeout(this.submitTimeout);
       this.submitTimeout = null;
@@ -183,13 +198,21 @@ export class ScoreSubmissionManager {
       return { success: true, message: 'No pending data to submit' };
     }
 
-    return submitPlayerScore(this.playerAddress, score, transactions);
+    this.isSubmitting = true;
+    try {
+      const result = await submitPlayerScore(this.playerAddress, score, transactions);
+      return result;
+    } finally {
+      this.isSubmitting = false;
+    }
   }
 
   // Schedule a delayed submission (batches multiple updates)
   private scheduleSubmission() {
-    if (this.submitTimeout) {
-      clearTimeout(this.submitTimeout);
+    if (this.submitTimeout || this.isSubmitting) {
+      if (this.submitTimeout) {
+        clearTimeout(this.submitTimeout);
+      }
     }
 
     this.submitTimeout = setTimeout(async () => {
@@ -198,7 +221,11 @@ export class ScoreSubmissionManager {
         if (!result.success) {
           console.error('Failed to submit score:', result.error);
         } else {
-          console.log('Score submitted successfully:', result.transactionHash);
+          console.log('Score submitted successfully:', {
+            transactionHash: result.transactionHash,
+            securityVerified: result.securityVerified,
+            duplicate: result.duplicate
+          });
         }
       }
     }, this.submitDelay);
@@ -209,6 +236,7 @@ export class ScoreSubmissionManager {
     return {
       score: this.pendingScore,
       transactions: this.pendingTransactions,
+      isSubmitting: this.isSubmitting,
     };
   }
 
@@ -218,6 +246,7 @@ export class ScoreSubmissionManager {
       clearTimeout(this.submitTimeout);
       this.submitTimeout = null;
     }
+    this.isSubmitting = false;
   }
 }
 

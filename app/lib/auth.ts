@@ -3,6 +3,7 @@ import crypto from 'crypto';
 
 // Remove the problematic client-side API secret
 const SERVER_API_SECRET = process.env.API_SECRET;
+const CSRF_SECRET = process.env.CSRF_SECRET || crypto.randomBytes(32).toString('hex');
 
 if (!SERVER_API_SECRET) {
   throw new Error('API_SECRET environment variable is required');
@@ -102,24 +103,99 @@ export function validateOrigin(request: NextRequest): boolean {
   return true;
 }
 
-// CSRF token generation and validation
-export function generateCSRFToken(): string {
-  return crypto.randomBytes(32).toString('hex');
+// Stateless CSRF token management (restart-safe)
+const CSRF_TOKEN_LIFETIME = 5 * 60 * 1000; // 5 minutes
+
+// Generate stateless CSRF token using HMAC (no storage needed)
+export function generateCSRFToken(sessionId?: string): { token: string; sessionId: string } {
+  const actualSessionId = sessionId || crypto.randomBytes(16).toString('hex');
+  const timestamp = Date.now();
+  const nonce = crypto.randomBytes(16).toString('hex');
+  
+  // Create token payload
+  const payload = `${actualSessionId}-${timestamp}-${nonce}`;
+  
+  // Sign with HMAC to create stateless token
+  const signature = crypto.createHmac('sha256', CSRF_SECRET).update(payload).digest('hex');
+  const token = `${payload}-${signature}`;
+  
+  console.log(`Generated stateless CSRF token: ${token.substring(0, 8)}...`);
+  return { token, sessionId: actualSessionId };
 }
 
-export function validateCSRFToken(request: NextRequest, expectedToken: string): boolean {
-  const token = request.headers.get('x-csrf-token');
-  return token === expectedToken;
+// Validate stateless CSRF token (no storage needed)
+export function validateCSRFToken(token: string, markAsUsed: boolean = true): boolean {
+  if (!token) {
+    console.log('CSRF validation failed: No token provided');
+    return false;
+  }
+
+  try {
+    // Parse token parts
+    const parts = token.split('-');
+    if (parts.length !== 4) {
+      console.log(`CSRF validation failed: Invalid token format ${token.substring(0, 8)}...`);
+      return false;
+    }
+
+    const [sessionId, timestampStr, nonce, signature] = parts;
+    const timestamp = parseInt(timestampStr, 10);
+    
+    if (isNaN(timestamp)) {
+      console.log(`CSRF validation failed: Invalid timestamp ${token.substring(0, 8)}...`);
+      return false;
+    }
+
+    // Check if token has expired
+    const now = Date.now();
+    if (now - timestamp > CSRF_TOKEN_LIFETIME) {
+      console.log(`CSRF validation failed: Token expired ${token.substring(0, 8)}...`);
+      return false;
+    }
+
+    // Verify HMAC signature
+    const payload = `${sessionId}-${timestamp}-${nonce}`;
+    const expectedSignature = crypto.createHmac('sha256', CSRF_SECRET).update(payload).digest('hex');
+    
+    if (signature !== expectedSignature) {
+      console.log(`CSRF validation failed: Invalid signature ${token.substring(0, 8)}...`);
+      return false;
+    }
+
+    console.log(`CSRF token validated successfully: ${token.substring(0, 8)}...`);
+    return true;
+    
+  } catch (error) {
+    console.log(`CSRF validation error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return false;
+  }
+}
+
+// Get CSRF token status for debugging
+export function getCSRFTokenStatus(): { message: string } {
+  return {
+    message: 'Using stateless CSRF tokens - no storage needed'
+  };
 }
 
 export function createAuthenticatedResponse(data: Record<string, unknown>, status = 200) {
-  return Response.json(data, {
+  const response = {
+    ...data,
+    timestamp: Date.now(),
+    serverSignature: crypto.createHmac('sha256', SERVER_API_SECRET).update(JSON.stringify(data)).digest('hex').substring(0, 16)
+  };
+
+  return Response.json(response, {
     status,
     headers: {
       'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-      'Access-Control-Allow-Methods': 'POST',
-      'Access-Control-Allow-Headers': 'Content-Type, x-api-key',
-      'Access-Control-Allow-Credentials': 'true'
+      'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, x-api-key, x-csrf-token, x-session-id',
+      'Access-Control-Allow-Credentials': 'true',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'X-XSS-Protection': '1; mode=block',
+      'Strict-Transport-Security': 'max-age=31536000; includeSubDomains'
     }
   });
 }
