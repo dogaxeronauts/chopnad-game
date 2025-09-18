@@ -1,5 +1,5 @@
 // Enhanced client-side API helpers with single-request security
-import { generateClientValidationKeys, ValidationKeys } from './cryptoValidation';
+import { generateClientValidationRequest, ClientValidationRequest } from './cryptoValidation';
 
 interface ScoreSubmissionResponse {
   success: boolean;
@@ -11,6 +11,8 @@ interface ScoreSubmissionResponse {
   nonce?: string;
   timestamp?: number;
   duplicate?: boolean;
+  retryAfter?: number;
+  isRateLimit?: boolean;
 }
 
 interface QueuedTransaction {
@@ -43,15 +45,15 @@ interface PlayerDataPerGameResponse {
   error?: string;
 }
 
-// Single-request secure score submission with 3-key cryptographic validation
+// Single-request secure score submission with server-side cryptographic validation
 export async function submitPlayerScore(
   playerAddress: string,
   scoreAmount: number,
   transactionAmount: number = 1
 ): Promise<ScoreSubmissionResponse> {
   try {
-    // Generate 3-key cryptographic validation
-    const validationKeys: ValidationKeys = generateClientValidationKeys(
+    // Generate secure client request with challenge-based nonce
+    const clientRequest: ClientValidationRequest = await generateClientValidationRequest(
       playerAddress,
       scoreAmount,
       transactionAmount
@@ -60,7 +62,7 @@ export async function submitPlayerScore(
     // Generate CSRF token client-side (stateless) - Will be deprecated soon
     const csrfToken = generateClientCSRFToken();
     
-    // Single request with all data including 3-key validation - server will handle signing internally
+    // Single request with minimal data - server generates and validates all security keys
     const response = await fetch('/api/update-player-data', {
       method: 'POST',
       credentials: 'include',
@@ -69,14 +71,34 @@ export async function submitPlayerScore(
         'x-csrf-token': csrfToken,
       },
       body: JSON.stringify({
-        playerAddress,
-        scoreAmount,
-        transactionAmount,
-        validationKeys: validationKeys
+        playerAddress: clientRequest.playerAddress,
+        scoreAmount: clientRequest.scoreAmount,
+        transactionAmount: clientRequest.transactionAmount,
+        timestamp: clientRequest.timestamp,
+        clientNonce: clientRequest.clientNonce
       }),
     });
 
     if (!response.ok) {
+      // For rate limiting errors, try to extract more info
+      if (response.status === 429) {
+        try {
+          const errorData = await response.json();
+          return {
+            success: false,
+            error: `Rate limited: ${errorData.error || 'Too many requests'}`,
+            retryAfter: errorData.resetTime,
+            isRateLimit: true
+          };
+        } catch {
+          return {
+            success: false,
+            error: 'Rate limited: Too many requests',
+            isRateLimit: true
+          };
+        }
+      }
+      
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
@@ -430,6 +452,8 @@ export class TransactionQueue {
           // Failed - check if we should retry
           const isPriorityError = result.error?.includes('Another transaction has higher priority') || 
                                   result.error?.includes('higher priority');
+          const isRateLimit = result.isRateLimit || result.error?.includes('Rate limit') || 
+                              result.error?.includes('Too many requests');
           
           if (transaction.attempts >= transaction.maxAttempts) {
             // Max attempts reached - remove from queue
@@ -438,9 +462,13 @@ export class TransactionQueue {
               transaction.onFailure(result.error || 'Max retry attempts reached');
             }
           } else {
-            // Schedule retry with different backoff for priority errors
+            // Schedule retry with different backoff for different error types
             let backoffDelay;
-            if (isPriorityError) {
+            if (isRateLimit) {
+              // For rate limit errors, use longer delays based on retryAfter if available
+              const baseDelay = result.retryAfter ? Math.max(result.retryAfter - Date.now(), 5000) : 30000;
+              backoffDelay = Math.min(baseDelay + (5000 * transaction.attempts), 120000); // 30s-2min
+            } else if (isPriorityError) {
               // For priority conflicts, use longer delays with more randomness
               backoffDelay = Math.min(
                 3000 + Math.random() * 5000 + (1000 * transaction.attempts), 
@@ -467,7 +495,12 @@ export class TransactionQueue {
           }
         } else {
           let backoffDelay;
-          if (isPriorityError) {
+          const isRateLimit = errorMessage.includes('Rate limit') || errorMessage.includes('Too many requests');
+          
+          if (isRateLimit) {
+            // For rate limit errors in catch block, use longer delays
+            backoffDelay = Math.min(30000 + (10000 * transaction.attempts), 120000); // 30s-2min
+          } else if (isPriorityError) {
             // For priority conflicts, use longer delays with more randomness
             backoffDelay = Math.min(
               3000 + Math.random() * 5000 + (1000 * transaction.attempts), 

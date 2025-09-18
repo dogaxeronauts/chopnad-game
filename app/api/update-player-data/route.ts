@@ -13,7 +13,7 @@ import {
 } from "@/app/lib/auth";
 import { rateLimit } from "@/app/lib/rate-limiter";
 import { getSigningService } from "@/app/lib/signMessage";
-import { getCryptoValidationService, ValidationRequest } from "@/app/lib/cryptoValidation";
+import { getCryptoValidationService, ClientValidationRequest } from "@/app/lib/cryptoValidation";
 import "dotenv/config";
 
 // Enhanced security with comprehensive abuse protection
@@ -103,9 +103,9 @@ export async function POST(request: NextRequest) {
       request.headers.get("x-real-ip") ||
       "unknown";
     
-    // Tier 1: General rate limiting (per IP)
+    // Tier 1: General rate limiting (per IP) - More lenient for gameplay
     const generalRateLimit = rateLimit(clientIp, {
-      maxRequests: 4, // Only 4 requests per minute per IP
+      maxRequests: 12, // 12 requests per minute per IP (allows multiple players)
       windowMs: 60000,
     });
 
@@ -121,11 +121,11 @@ export async function POST(request: NextRequest) {
 
     // Parse request body first for additional rate limiting
     const requestBody = await request.json();
-    const { playerAddress, scoreAmount, transactionAmount, validationKeys } = requestBody;
+    const { playerAddress, scoreAmount, transactionAmount, timestamp, clientNonce } = requestBody;
 
-    // Tier 2: Per-player rate limiting
+    // Tier 2: Per-player rate limiting - Allow normal gameplay flow
     const playerRateLimit = rateLimit(`player:${playerAddress}`, {
-      maxRequests: 8, // 8 requests per player per minute
+      maxRequests: 8, // 8 requests per player per minute (1 every 7.5 seconds)
       windowMs: 60000,
     });
 
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
     const hourlyData = hourlyLimits.get(hourlyKey) || { score: 0, transactions: 0, timestamp: Date.now() };
 
     const MAX_SCORE_PER_HOUR = 30000; // Max 30000 points per hour per player
-    const MAX_TRANSACTIONS_PER_HOUR = 120; // Max 120 transactions per hour per player
+    const MAX_TRANSACTIONS_PER_HOUR = 140; // Max 140 transactions per hour per player
     
     if (hourlyData.score + scoreAmount > MAX_SCORE_PER_HOUR) {
       return createAuthenticatedResponse(
@@ -173,13 +173,13 @@ export async function POST(request: NextRequest) {
     const behaviorKey = playerAddress;
     const behaviorData = scoreTracking.get(behaviorKey) || { totalScore: 0, requests: 0, firstRequest: Date.now() };
     
-    // Check for rapid fire requests (less than 5 seconds between requests)
+    // Check for rapid fire requests (less than 3 seconds between requests) - more lenient
     const timeSinceLastRequest = Date.now() - (behaviorData.firstRequest + (behaviorData.requests * 1000));
-    if (behaviorData.requests > 0 && timeSinceLastRequest < 5000) {
+    if (behaviorData.requests > 3 && timeSinceLastRequest < 3000) { // Only trigger after 3+ requests and 3s interval
       return createAuthenticatedResponse(
         {
-          error: "Request too frequent: Minimum 5 seconds between score submissions",
-          waitTime: 5000 - timeSinceLastRequest,
+          error: "Request too frequent: Minimum 3 seconds between score submissions",
+          waitTime: 3000 - timeSinceLastRequest,
         },
         429
       );
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
     // Check for unrealistic score patterns (too much score too quickly)
     const sessionDuration = Date.now() - behaviorData.firstRequest;
     const avgScorePerMinute = sessionDuration > 0 ? (behaviorData.totalScore * 60000) / sessionDuration : 0;
-    const MAX_SCORE_PER_MINUTE_AVG = 3000; // Max 3000 points per minute average
+    const MAX_SCORE_PER_MINUTE_AVG = 1400; // Max 1400 points per minute average
     
     if (avgScorePerMinute > MAX_SCORE_PER_MINUTE_AVG && behaviorData.requests > 5) {
       return createAuthenticatedResponse(
@@ -204,26 +204,38 @@ export async function POST(request: NextRequest) {
     //* SECURITY LAYER 3: 3-Key Cryptographic Validation (ULTRA SECURE)
     const cryptoService = getCryptoValidationService();
     
-    // Validation keys kontrolü
-    if (!validationKeys || !validationKeys.temporalKey || !validationKeys.payloadKey || !validationKeys.identityKey) {
+    // Create client validation request
+    const clientRequest: ClientValidationRequest = {
+      playerAddress,
+      scoreAmount,
+      transactionAmount,
+      timestamp: timestamp || Date.now(),
+      clientNonce: clientNonce || ''
+    };
+    
+    // Basic request validation
+    if (!clientRequest.playerAddress || !clientRequest.playerAddress.startsWith('0x')) {
       return createAuthenticatedResponse(
         { 
-          error: "Missing validation keys: temporalKey, payloadKey, and identityKey required",
-          required: ["temporalKey", "payloadKey", "identityKey"]
+          error: "Invalid player address format",
+          message: "Player address must be a valid Ethereum address starting with 0x"
         },
         400
       );
     }
 
-    const validationRequest: ValidationRequest = {
-      playerAddress,
-      scoreAmount,
-      transactionAmount,
-      validationKeys,
-      timestamp: Date.now()
-    };
+    if (!clientRequest.clientNonce || clientRequest.clientNonce.length < 16) {
+      return createAuthenticatedResponse(
+        { 
+          error: "Invalid or missing client nonce",
+          message: "Client nonce must be at least 16 characters long"
+        },
+        400
+      );
+    }
 
-    const cryptoValidation = cryptoService.validateKeys(validationKeys, validationRequest);
+    // Secure server-side validation and key generation
+    const cryptoValidation = cryptoService.validateClientRequest(clientRequest);
     
     if (!cryptoValidation.valid) {
       return createAuthenticatedResponse(
@@ -231,7 +243,7 @@ export async function POST(request: NextRequest) {
           error: "Cryptographic validation failed",
           details: cryptoValidation.errors,
           securityLevel: cryptoValidation.securityLevel,
-          message: "Request rejected due to invalid or reused validation keys"
+          message: "Request rejected due to invalid parameters or security constraints"
         },
         401
       );
@@ -279,10 +291,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Realistic game limits
-    const MAX_SCORE_PER_REQUEST = 1000; // Much more restrictive - max 1000 per request
-    const MAX_TRANSACTIONS_PER_REQUEST = 3; // Max 3 transactions per request
+    const MAX_SCORE_PER_REQUEST = 800; // Much more restrictive - max 850 per request
+    const MAX_TRANSACTIONS_PER_REQUEST = 2; // Max 2 transactions per request
     const MIN_SCORE_PER_REQUEST = 1;
-    const MAX_SCORE_PER_TRANSACTION = 1000; // Max 1000 points per transaction
+    const MAX_SCORE_PER_TRANSACTION = 800; // Max 750 points per transaction
 
     if (scoreAmount > MAX_SCORE_PER_REQUEST) {
       return createAuthenticatedResponse(
