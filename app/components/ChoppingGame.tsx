@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { TransactionQueue, getPlayerTotalData } from "../lib/score-api";
-import { GAME_CONFIG } from "../lib/game-config";
 import toast from "react-hot-toast";
 
 /**

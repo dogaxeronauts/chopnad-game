@@ -8,7 +8,6 @@ import {
   isValidAddress,
 } from "@/app/lib/blockchain";
 import {
-  validateCSRFToken,
   validateOrigin,
   createAuthenticatedResponse,
 } from "@/app/lib/auth";
@@ -75,7 +74,7 @@ function isValidCSRFFormat(token: string): boolean {
 }
 
 // Nonce-based request deduplication with improved tracking
-const processedRequests = new Map<string, { timestamp: number; result: any }>();
+const processedRequests = new Map<string, { timestamp: number; result: Record<string, unknown> }>();
 const REQUEST_DEDUP_WINDOW = 5 * 60 * 1000; // 5 minutes
 
 // Clean up old processed requests
@@ -387,7 +386,6 @@ export async function POST(request: NextRequest) {
     ].filter(Boolean);
 
     const selectedUrl = ALCHEMY_RPC_URLS[currentUrlIndex % ALCHEMY_RPC_URLS.length];
-    const usedIndex = currentUrlIndex % ALCHEMY_RPC_URLS.length;
     currentUrlIndex = (currentUrlIndex + 1) % ALCHEMY_RPC_URLS.length;
 
     const walletClient = createWalletClient({
@@ -395,8 +393,6 @@ export async function POST(request: NextRequest) {
       chain: monadTestnet,
       transport: http(selectedUrl),
     });
-
-    const urlDomain = selectedUrl ? new URL(selectedUrl).hostname : 'unknown';
 
     // Execute blockchain transaction
     const hash = await walletClient.writeContract({
@@ -488,6 +484,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS() {
   return createAuthenticatedResponse({}, 200);
 }

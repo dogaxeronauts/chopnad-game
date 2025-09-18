@@ -24,9 +24,7 @@ function PrivyAuth({ onAddressChange }: { onAddressChange: (address: string) => 
   
   const { 
     user: monadUser, 
-    hasUsername, 
-    isLoading: isLoadingUser, 
-    error: userError 
+    hasUsername
   } = useMonadGamesUser(accountAddress);
 
   useEffect(() => {
