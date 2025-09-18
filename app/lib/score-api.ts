@@ -339,7 +339,7 @@ export class TransactionQueue {
     });
     
     // Create combined transactions per player
-    batchByPlayer.forEach((transactions, playerAddress) => {
+    batchByPlayer.forEach((transactions) => {
       if (transactions.length === 1) {
         // Single transaction, add as is
         this.queue.push(transactions[0]);

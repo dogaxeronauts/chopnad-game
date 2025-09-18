@@ -1,6 +1,6 @@
-import { createWalletClient, http, PrivateKeyAccount } from "viem";
+import { createWalletClient, http, WalletClient } from "viem";
 import { monadTestnet } from "viem/chains";
-import { privateKeyToAccount } from "viem/accounts";
+import { privateKeyToAccount, PrivateKeyAccount } from "viem/accounts";
 import crypto from 'crypto';
 
 interface SignatureResult {
@@ -18,7 +18,7 @@ interface SignatureVerificationResult {
 
 class ServerSigningService {
   private account: PrivateKeyAccount;
-  private walletClient: any;
+  private walletClient: WalletClient;
   private usedNonces: Set<string> = new Set();
 
   constructor() {
@@ -196,7 +196,7 @@ class ServerSigningService {
         nonce: parts[4],
         timestamp: parseInt(parts[5], 10)
       };
-    } catch (error) {
+    } catch {
       return null;
     }
   }

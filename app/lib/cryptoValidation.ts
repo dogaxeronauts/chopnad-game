@@ -274,7 +274,7 @@ class CryptoValidationService {
         return { valid: false, error: 'Invalid payload key data format' };
       }
 
-      const [keyPlayerAddress, keyScoreAmount, keyTransactionAmount, salt] = parts;
+      const [keyPlayerAddress, keyScoreAmount, keyTransactionAmount] = parts;
       
       if (keyPlayerAddress !== playerAddress) {
         return { valid: false, error: 'Player address mismatch in payload key' };
@@ -289,7 +289,7 @@ class CryptoValidationService {
       }
 
       return { valid: true };
-    } catch (error) {
+    } catch {
       return { valid: false, error: 'Payload key validation error' };
     }
   }
@@ -326,7 +326,7 @@ class CryptoValidationService {
         return { valid: false, error: 'Invalid identity key data format' };
       }
 
-      const [keyPlayerAddress, keyTimestamp, sessionId] = parts;
+      const [keyPlayerAddress, keyTimestamp] = parts;
       
       if (keyPlayerAddress !== playerAddress) {
         return { valid: false, error: 'Player address mismatch in identity key' };
@@ -344,7 +344,7 @@ class CryptoValidationService {
       }
 
       return { valid: true };
-    } catch (error) {
+    } catch {
       return { valid: false, error: 'Identity key validation error' };
     }
   }

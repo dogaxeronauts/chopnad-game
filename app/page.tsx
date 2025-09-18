@@ -9,7 +9,7 @@ import { useMonadGamesUser } from "./hooks/useMonadGamesUser";
 
 export default function Home() {
   const [playerAddress, setPlayerAddress] = useState<string>("");
-  const { user, isLoading, error } = useMonadGamesUser(playerAddress);
+  const { user } = useMonadGamesUser(playerAddress);
   const { logout } = usePrivy(); // Privy logout fonksiyonu
 
   const handleLogout = async () => {
