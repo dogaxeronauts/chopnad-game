@@ -34,13 +34,11 @@ setInterval(() => {
 export function validateSessionToken(token: string, playerAddress: string, timestampWindow: number = 300000): boolean {
   // Check if token has already been used - FIRST CHECK
   if (usedSessionTokens.has(token)) {
-    console.log('Token already used:', token);
     return false;
   }
   
   // Mark token as used IMMEDIATELY to prevent race conditions
   usedSessionTokens.add(token);
-  console.log('Token added to used set:', token);
   
   const now = Date.now();
   
@@ -49,15 +47,12 @@ export function validateSessionToken(token: string, playerAddress: string, times
     const timestamp = now - i;
     const expectedToken = generateSessionToken(playerAddress, Math.floor(timestamp / 30000) * 30000);
     if (token === expectedToken) {
-      console.log('Token validated and confirmed as used:', token);
-      console.log('Used tokens count:', usedSessionTokens.size);
       return true;
     }
   }
   
   // If token is invalid, remove it from used tokens
   usedSessionTokens.delete(token);
-  console.log('Invalid token, removed from used set:', token);
   return false;
 }
 
@@ -119,14 +114,12 @@ export function generateCSRFToken(sessionId?: string): { token: string; sessionI
   const signature = crypto.createHmac('sha256', CSRF_SECRET).update(payload).digest('hex');
   const token = `${payload}-${signature}`;
   
-  console.log(`Generated stateless CSRF token: ${token.substring(0, 8)}...`);
   return { token, sessionId: actualSessionId };
 }
 
 // Validate stateless CSRF token (no storage needed)
 export function validateCSRFToken(token: string, markAsUsed: boolean = true): boolean {
   if (!token) {
-    console.log('CSRF validation failed: No token provided');
     return false;
   }
 
@@ -134,7 +127,6 @@ export function validateCSRFToken(token: string, markAsUsed: boolean = true): bo
     // Parse token parts
     const parts = token.split('-');
     if (parts.length !== 4) {
-      console.log(`CSRF validation failed: Invalid token format ${token.substring(0, 8)}...`);
       return false;
     }
 
@@ -142,14 +134,12 @@ export function validateCSRFToken(token: string, markAsUsed: boolean = true): bo
     const timestamp = parseInt(timestampStr, 10);
     
     if (isNaN(timestamp)) {
-      console.log(`CSRF validation failed: Invalid timestamp ${token.substring(0, 8)}...`);
       return false;
     }
 
     // Check if token has expired
     const now = Date.now();
     if (now - timestamp > CSRF_TOKEN_LIFETIME) {
-      console.log(`CSRF validation failed: Token expired ${token.substring(0, 8)}...`);
       return false;
     }
 
@@ -158,15 +148,12 @@ export function validateCSRFToken(token: string, markAsUsed: boolean = true): bo
     const expectedSignature = crypto.createHmac('sha256', CSRF_SECRET).update(payload).digest('hex');
     
     if (signature !== expectedSignature) {
-      console.log(`CSRF validation failed: Invalid signature ${token.substring(0, 8)}...`);
       return false;
     }
 
-    console.log(`CSRF token validated successfully: ${token.substring(0, 8)}...`);
     return true;
     
   } catch (error) {
-    console.log(`CSRF validation error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     return false;
   }
 }

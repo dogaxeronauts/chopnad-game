@@ -51,18 +51,12 @@ export async function submitPlayerScore(
 ): Promise<ScoreSubmissionResponse> {
   try {
     // Generate 3-key cryptographic validation
-    console.log('Generating cryptographic validation keys...');
     const validationKeys: ValidationKeys = generateClientValidationKeys(
       playerAddress,
       scoreAmount,
       transactionAmount
     );
     
-    console.log('Validation keys generated:', {
-      temporalKey: validationKeys.temporalKey,
-      payloadKey: validationKeys.payloadKey,
-      identityKey: validationKeys.identityKey
-    });
     // Generate CSRF token client-side (stateless) - Will be deprecated soon
     const csrfToken = generateClientCSRFToken();
     
@@ -114,8 +108,6 @@ function generateClientCSRFToken(): string {
   const nonce = generateRandomString(16);
   
   const token = `${sessionId}-${timestamp}-${nonce}-client`;
-  console.log('Generated CSRF token:', token.substring(0, 8) + '...');
-  console.log('Token parts:', { sessionId, timestamp, nonce, suffix: 'client' });
   
   return token;
 }
@@ -220,12 +212,6 @@ export class ScoreSubmissionManager {
         const result = await this.submitImmediately();
         if (!result.success) {
           console.error('Failed to submit score:', result.error);
-        } else {
-          console.log('Score submitted successfully:', {
-            transactionHash: result.transactionHash,
-            securityVerified: result.securityVerified,
-            duplicate: result.duplicate
-          });
         }
       }
     }, this.submitDelay);
@@ -436,11 +422,6 @@ export class TransactionQueue {
         if (result.success) {
           // Success - remove from queue
           this.removeTransaction(transaction.id);
-          
-          // Log testnet explorer link
-          if (result.transactionHash) {
-            console.log(`Transaction confirmed: https://testnet.monadscan.com/tx/${result.transactionHash}`);
-          }
           
           if (transaction.onSuccess) {
             transaction.onSuccess(result);

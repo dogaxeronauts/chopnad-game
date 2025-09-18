@@ -44,15 +44,10 @@ setInterval(() => {
 
 // Simple CSRF token format validation for single-request flow
 function isValidCSRFFormat(token: string): boolean {
-  console.log('Validating CSRF token format:', token);
-  
   // Basic format check: sessionId-timestamp-nonce-client
   const parts = token.split('-');
-  console.log('Token parts:', parts);
-  console.log('Parts length:', parts.length);
   
   if (parts.length !== 4) {
-    console.log('Invalid parts length, expected 4, got:', parts.length);
     return false;
   }
   
@@ -60,27 +55,22 @@ function isValidCSRFFormat(token: string): boolean {
   
   // Check parts are not empty and suffix is 'client'
   if (!sessionId || !timestampStr || !nonce || suffix !== 'client') {
-    console.log('Empty parts or wrong suffix:', { sessionId: !!sessionId, timestampStr: !!timestampStr, nonce: !!nonce, suffix });
     return false;
   }
   
   // Check timestamp is valid number
   const timestamp = parseInt(timestampStr, 10);
   if (isNaN(timestamp)) {
-    console.log('Invalid timestamp:', timestampStr);
     return false;
   }
   
   // Check timestamp is not too old (5 minutes)
   const now = Date.now();
   const age = now - timestamp;
-  console.log('Token age (ms):', age, 'Max age:', 5 * 60 * 1000);
   if (age > 5 * 60 * 1000) {
-    console.log('Token too old, age:', age);
     return false;
   }
   
-  console.log('CSRF token format validation passed');
   return true;
 }
 
@@ -237,7 +227,6 @@ export async function POST(request: NextRequest) {
     const cryptoValidation = cryptoService.validateKeys(validationKeys, validationRequest);
     
     if (!cryptoValidation.valid) {
-      console.log('Crypto validation failed:', cryptoValidation.errors);
       return createAuthenticatedResponse(
         {
           error: "Cryptographic validation failed",
@@ -249,23 +238,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`Crypto validation passed with security level: ${cryptoValidation.securityLevel}`);
-
     //* SECURITY LAYER 4: CSRF token validation (simplified - will be removed soon)
     const csrfToken = request.headers.get('x-csrf-token');
-    console.log('CSRF Debug - Received token:', csrfToken ? csrfToken.substring(0, 8) + '...' : 'null');
     
     // Simple CSRF validation for single-request flow
     if (!csrfToken || !isValidCSRFFormat(csrfToken)) {
-      console.log('CSRF validation failed for token:', csrfToken ? csrfToken.substring(0, 8) + '...' : 'null');
       return createAuthenticatedResponse(
         { error: "Unauthorized: Invalid CSRF token format" },
         401
       );
     }
     
-    console.log('CSRF token format validated successfully');
-
     //* SECURITY LAYER 5: Required fields validation
     if (
       !playerAddress ||
@@ -413,9 +396,7 @@ export async function POST(request: NextRequest) {
       transport: http(selectedUrl),
     });
 
-    console.log(`Using RPC URL index: ${usedIndex}`);
     const urlDomain = selectedUrl ? new URL(selectedUrl).hostname : 'unknown';
-    console.log(`RPC Domain: ${urlDomain}`);
 
     // Execute blockchain transaction
     const hash = await walletClient.writeContract({

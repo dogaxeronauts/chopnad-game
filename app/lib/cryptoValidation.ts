@@ -236,7 +236,7 @@ class CryptoValidationService {
       }
 
       return { valid: true };
-    } catch (error) {
+    } catch {
       return { valid: false, error: 'Temporal key validation error' };
     }
   }
@@ -365,7 +365,6 @@ class CryptoValidationService {
       this.usedTemporalKeys.clear();
       this.usedPayloadKeys.clear();
       this.usedIdentityKeys.clear();
-      console.log('Crypto validation: Cleared old keys due to memory limit');
     }
   }
 

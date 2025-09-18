@@ -208,7 +208,6 @@ class ServerSigningService {
     // Since we can't track timestamps in a Set, we'll clear all nonces periodically
     // This is acceptable since signatures expire in 5 minutes anyway
     this.usedNonces.clear();
-    console.log('Cleaned up old nonces');
   }
 
   /**
