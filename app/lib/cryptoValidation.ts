@@ -105,7 +105,7 @@ class CryptoValidationService {
         challenge,
         expiresAt
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: 'Failed to generate challenge'
@@ -349,10 +349,10 @@ class CryptoValidationService {
       
       // 2. Server-side cryptographic challenge
       // Client cannot predict this, so we use it for unique verification
-      const serverChallenge = crypto
-        .createHmac('sha256', this.SERVER_IDENTITY_SECRET)
-        .update(`${playerAddress}-${clientNonce}-${timestamp}`)
-        .digest('hex');
+      // const serverChallenge = crypto
+      //   .createHmac('sha256', this.SERVER_IDENTITY_SECRET)
+      //   .update(`${playerAddress}-${clientNonce}-${timestamp}`)
+      //   .digest('hex');
       
       // 3. Entropy and pattern checks
       const nonceBytes = Buffer.from(clientNonce, 'hex');
@@ -752,26 +752,26 @@ export function generateClientValidationRequestSync(
   };
 }
 
-// Secure client nonce generation - server expectations ile uyumlu
-function generateSecureClientNonce(playerAddress: string, timestamp: number): string {
-  // Browser-compatible crypto random generation
-  const getRandomBytes = (length: number): string => {
-    if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
-      const array = new Uint8Array(length);
-      window.crypto.getRandomValues(array);
-      return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
-    } else {
-      // Node.js environment  
-      return crypto.randomBytes(length).toString('hex');
-    }
-  };
-
-  // Client needs to generate nonce that will pass server validation
-  // Generate exactly 32-character hexadecimal string (16 bytes)
-  const randomBytes16 = getRandomBytes(16); // 16 bytes = exactly 32 hex characters
-  
-  return randomBytes16;
-}
+// Secure client nonce generation - server expectations ile uyumlu (UNUSEd / COMMENTED OUT to avoid lint warnings)
+// function generateSecureClientNonce(playerAddress: string, timestamp: number): string {
+//   // Browser-compatible crypto random generation
+//   const getRandomBytes = (length: number): string => {
+//     if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+//       const array = new Uint8Array(length);
+//       window.crypto.getRandomValues(array);
+//       return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+//     } else {
+//       // Node.js environment  
+//       return crypto.randomBytes(length).toString('hex');
+//     }
+//   };
+// 
+//   // Client needs to generate nonce that will pass server validation
+//   // Generate exactly 32-character hexadecimal string (16 bytes)
+//   const randomBytes16 = getRandomBytes(16); // 16 bytes = exactly 32 hex characters
+//   
+//   return randomBytes16;
+// }
 
 // Challenge-based secure nonce generation for client
 export async function generateChallengeBasedNonce(playerAddress: string): Promise<string> {

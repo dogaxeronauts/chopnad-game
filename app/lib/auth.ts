@@ -118,7 +118,7 @@ export function generateCSRFToken(sessionId?: string): { token: string; sessionI
 }
 
 // Validate stateless CSRF token (no storage needed)
-export function validateCSRFToken(token: string, markAsUsed: boolean = true): boolean {
+export function validateCSRFToken(token: string): boolean {
   if (!token) {
     return false;
   }
@@ -153,7 +153,7 @@ export function validateCSRFToken(token: string, markAsUsed: boolean = true): bo
 
     return true;
     
-  } catch (error) {
+  } catch {
     return false;
   }
 }

@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-unused-expressions */
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { TransactionQueue, getPlayerTotalData } from "../lib/score-api";
 import toast from "react-hot-toast";
@@ -57,6 +59,11 @@ const VEG_H = 72;
 const GAP = 8;
 const PACK_PAD = 10;
 const MAX_FLIGHTS = 28;
+
+const chefPoses = {
+  idle: "/sef1.png",
+  chop: "/sef3.png",
+};
 
 const safeStyle = (s?: React.CSSProperties) =>
   s
@@ -156,7 +163,6 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
   orderRef.current = order;
 
   const [score, setScore] = useState(0);
-  const [lastSubmittedScore, setLastSubmittedScore] = useState(0);
 
   // Transaction queue for handling retries
   const transactionQueueRef = useRef<TransactionQueue | null>(null);
@@ -351,6 +357,7 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
       newOrder();
       requestAnimationFrame(loop);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [VegDefs]);
 
   /* --------------------------------- Input --------------------------------- */
@@ -386,9 +393,11 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
 
     const onMouse = (e: MouseEvent) => (e.button === 0 && chop()) || undefined;
 
+    const sceneEl = sceneRef.current;
+
     addEventListener("keydown", onDown);
     addEventListener("keyup", onUp);
-    sceneRef.current?.addEventListener("mousedown", onMouse);
+    sceneEl?.addEventListener("mousedown", onMouse);
     try {
       acRef.current = new (window.AudioContext ||
         (window as typeof window & { webkitAudioContext: typeof AudioContext })
@@ -399,8 +408,9 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
     return () => {
       removeEventListener("keydown", onDown);
       removeEventListener("keyup", onUp);
-      sceneRef.current?.removeEventListener("mousedown", onMouse);
+      sceneEl?.removeEventListener("mousedown", onMouse);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ---------------------------- Order Bubble UI ---------------------------- */
@@ -430,7 +440,7 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
       : [];
     const isTwoColumn = entries.length > 4;
     const itemsHtml = entries
-      .map(([k, c], i) => {
+      .map(([k, c]) => {
         const v = VegDefs.find((x) => x.key === k);
         const done = (orderRef.current?.chopped.get(k) || 0) as number;
         return v
@@ -717,15 +727,10 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
   });
 
   /* --------------------------------- Chop ---------------------------------- */
-  const chefPoses = {
-    idle: "/sef1.png",
-    chop: "/sef3.png",
-  };
-
   const [chefPose, setChefPose] = useState<keyof typeof chefPoses>("idle");
 
   useEffect(() => {
-    ["/sef1.png", "/sef3.png"].forEach((src) => {
+    Object.values(chefPoses).forEach((src) => {
       const link = document.createElement("link");
       link.rel = "preload";
       link.as = "image";
@@ -1859,17 +1864,17 @@ const ChoppingGame: React.FC<ChoppingGameProps> = ({
   );
 };
 
-const ANGER_EFFECTS = [
-  { beltSpeed: 1, chopCD: 1, chefEmote: "calm" },
-  { beltSpeed: 1.2, chopCD: 1.3, chefEmote: "mad" },
-  { beltSpeed: 1.5, chopCD: 1.6, chefEmote: "rage" },
-];
-function updateAngerEffects(anger: number) {
-  const thresholds = [25, 50, 75];
-  const level = thresholds.findIndex((t) => anger >= t);
-  // TODO: Implement applyEffects or handle effects here
-  // Example stub:
-  // applyEffects(ANGER_EFFECTS[level]);
-}
+// const ANGER_EFFECTS = [
+//   { beltSpeed: 1, chopCD: 1, chefEmote: "calm" },
+//   { beltSpeed: 1.2, chopCD: 1.3, chefEmote: "mad" },
+//   { beltSpeed: 1.5, chopCD: 1.6, chefEmote: "rage" },
+// ];
+// function updateAngerEffects(anger: number) {
+//   const thresholds = [25, 50, 75];
+//   const level = thresholds.findIndex((t) => anger >= t);
+//   // TODO: Implement applyEffects or handle effects here
+//   // Example stub:
+//   // applyEffects(ANGER_EFFECTS[level]);
+// }
 
 export default ChoppingGame;

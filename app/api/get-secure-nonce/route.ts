@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getCryptoValidationService } from "@/app/lib/cryptoValidation";
 import {
   validateOrigin,
